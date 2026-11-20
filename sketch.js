@@ -160,13 +160,22 @@ function criarElementosInputNickname() {
 }
 
 function atualizarPosicaoElementosNickname() {
+function atualizarPosicaoElementosNickname() {
   if (!cnv || !inputNickname || !btnConfirmarNome) return;
-  let posCanvas = cnv.position();
-  inputNickname.position(posCanvas.x + width / 2 - 140, posCanvas.y + height / 2 - 24);
-  inputNickname.size(280, 44);
+  let rect = cnv.elt.getBoundingClientRect();
+  let escala = rect.width / width;
 
-  btnConfirmarNome.position(posCanvas.x + width / 2 - 95, posCanvas.y + height / 2 + 40);
-  btnConfirmarNome.size(190, 46);
+  let wInput = 280 * escala;
+  let hInput = 44 * escala;
+  inputNickname.position(rect.left + rect.width / 2 - wInput / 2, rect.top + rect.height / 2 - 24 * escala);
+  inputNickname.size(wInput, hInput);
+  inputNickname.style("font-size", Math.max(12, Math.round(20 * escala)) + "px");
+
+  let wBtn = 190 * escala;
+  let hBtn = 46 * escala;
+  btnConfirmarNome.position(rect.left + rect.width / 2 - wBtn / 2, rect.top + rect.height / 2 + 40 * escala);
+  btnConfirmarNome.size(wBtn, hBtn);
+  btnConfirmarNome.style("font-size", Math.max(11, Math.round(18 * escala)) + "px");
 }
 
 function mostrarFormularioNickname(preencherAtual) {
