@@ -160,7 +160,6 @@ function criarElementosInputNickname() {
 }
 
 function atualizarPosicaoElementosNickname() {
-function atualizarPosicaoElementosNickname() {
   if (!cnv || !inputNickname || !btnConfirmarNome) return;
   let rect = cnv.elt.getBoundingClientRect();
   let escala = rect.width / width;
