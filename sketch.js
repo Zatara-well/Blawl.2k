@@ -5313,6 +5313,101 @@ class Brawler {
     return this.municao >= 2;
   }
   
+    obterPosicaoCoberturaBarley(alvo, verificarVeneno = false) {
+    let melhorPonto = null;
+    let menorDistParaMim = Infinity;
+    let centroX = mundoLargura / 2;
+    let centroY = mundoAltura / 2;
+
+    for (let o of obstaculos) {
+      let ox = o.x + o.w / 2;
+      let oy = o.y + o.h / 2;
+
+      if (dist(this.x, this.y, ox, oy) > 270) continue;
+
+      let angDetras = atan2(oy - alvo.y, ox - alvo.x);
+      let meiaLarguraDir = abs(cos(angDetras)) * (o.w * 0.5) + abs(sin(angDetras)) * (o.h * 0.5);
+      let margem = meiaLarguraDir + this.raio + 14;
+
+      let cx = constrain(ox + cos(angDetras) * margem, 45, mundoLargura - 45);
+      let cy = constrain(oy + sin(angDetras) * margem, 75, mundoAltura - 45);
+
+      if (this.colideObstaculo(cx, cy)) continue;
+
+      let distAlvoCobertura = dist(cx, cy, alvo.x, alvo.y);
+      if (distAlvoCobertura > 265 || distAlvoCobertura < 120) continue;
+
+      if (verificarVeneno && dist(cx, cy, centroX, centroY) > venenoRaio - 95) continue;
+
+      let dMim = dist(this.x, this.y, cx, cy);
+      if (dMim < menorDistParaMim) {
+        menorDistParaMim = dMim;
+        melhorPonto = { x: cx, y: cy };
+      }
+    }
+
+    return melhorPonto;
+  }
+
+  moverBarleyTatico(alvo, menorDist, verificarVeneno = false) {
+    let alcanceIdeal = 245;
+    let angAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
+    let angParaMim = angAlvo + PI;
+
+    // Verifica se o inimigo está realmente vindo na direção do Barley
+    let velAproximacao = (alvo.vxAtual || 0) * cos(angParaMim) + (alvo.vyAtual || 0) * sin(angParaMim);
+    let inimigoPerseguindo = velAproximacao > 0.45;
+
+    // 1. Procura se proteger atrás das paredes (se o inimigo não estiver colado em cima)
+    if (menorDist >= 130) {
+      let cobertura = this.obterPosicaoCoberturaBarley(alvo, verificarVeneno);
+      if (cobertura) {
+        let distCobertura = dist(this.x, this.y, cobertura.x, cobertura.y);
+        if (distCobertura <= 20) {
+          let angLateral = angAlvo + HALF_PI;
+          let ox = cos(angLateral) * sin(frameCount * 0.05) * 0.55;
+          let oy = sin(angLateral) * sin(frameCount * 0.05) * 0.55;
+          this.aplicarMovimento(ox, oy);
+          this.angulo = angAlvo;
+          return;
+        } else {
+          this.navegarPara(cobertura.x, cobertura.y, 0.86);
+          this.angulo = angAlvo;
+          return;
+        }
+      }
+    }
+
+    // 2. Recuo suave e curvo se o inimigo chegar perto ou vier perseguindo
+    if (menorDist < 195 || (menorDist < 230 && inimigoPerseguindo)) {
+      let fatorPerigo = constrain(map(menorDist, 100, 230, 1.0, 0.3), 0.3, 1.0);
+      let pertoBorda = this.x < 85 || this.x > mundoLargura - 85 || this.y < 105 || this.y > mundoAltura - 85;
+      if (pertoBorda) fatorPerigo *= 0.45;
+
+      let angStrafe = angAlvo + HALF_PI * this.ladoContornoBot;
+      let angRecuoTotal = angAlvo + PI;
+
+      let dirX = lerp(cos(angStrafe), cos(angRecuoTotal), fatorPerigo * 0.72);
+      let dirY = lerp(sin(angStrafe), sin(angRecuoTotal), fatorPerigo * 0.72);
+      let angSuave = atan2(dirY, dirX);
+
+      let velFator = lerp(0.68, 0.88, fatorPerigo);
+      this.navegarPara(this.x + cos(angSuave) * 110, this.y + sin(angSuave) * 110, velFator);
+      this.angulo = angAlvo;
+      return;
+    }
+
+    // 3. Se o inimigo parou de perseguir ou está longe, avança suavemente até o alcance ideal (245)
+    if (menorDist > alcanceIdeal) {
+      let angMov = this.navegarPara(alvo.x, alvo.y, 0.82);
+      this.angulo = lerp(angMov, angAlvo, 0.75);
+    } else {
+      let angStrafe = angAlvo + HALF_PI * this.ladoContornoBot;
+      this.navegarPara(this.x + cos(angStrafe) * 70, this.y + sin(angStrafe) * 70, 0.55);
+      this.angulo = angAlvo;
+    }
+  }
+
   iaCombate(todos) {
     let alvo = null;
     let menorDist = Infinity;
@@ -5337,13 +5432,16 @@ class Brawler {
     }
 
     let alcanceIdeal = this.tipo === "COLT" ? 260 : (this.tipo === "BARLEY" ? 225 : 95);
-
+    
     if (alvo && menorDist < 540) {
       let temVisao = this.tipo === "BARLEY" ? true : this.temLinhaDeVisao(alvo.x, alvo.y);
       let angAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
       let poucaVida = this.vida < this.vidaMax * 0.35;
 
-      if (poucaVida && menorDist <= 220) {
+      if (this.tipo === "BARLEY") {
+        this.moverBarleyTatico(alvo, menorDist, true);
+      } else if (poucaVida && menorDist <= 220) {
+
         // PERTO COM POUCA VIDA: arrisca e vai pra cima com tudo!
         this.navegarPara(alvo.x, alvo.y, 1.05);
         this.angulo = angAlvo;
@@ -5512,11 +5610,16 @@ class Brawler {
         }
       }
 
-      let angMov = this.navegarPara(golInimigoX, alvoGolY, 0.96);
+    let angMov = this.angulo;
+    if (this.tipo === "BARLEY" && maisPerto && menorD < 315 && (!bolaObj.posse || bolaObj.posse.time === this.time || menorD < 235)) {
+      this.moverBarleyTatico(maisPerto, menorD, false);
+      angMov = this.angulo;
+    } else {
+      angMov = this.navegarPara(destX, destY, 0.94);
+    }
       this.angulo = lerp(angMov, angGol, 0.65);
       return;
     }
-
     this.tempoComBola = 0;
 
     // Se houver 2 ou 3 inimigos na frente impedindo o gol, ignora a bola e vai matar até sobrar 1 ou 0
