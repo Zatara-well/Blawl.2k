@@ -5309,7 +5309,7 @@ class Brawler {
     // 3. TROCA NORMAL (média distância): atira, mas sempre guarda 1 munição de reserva
     return this.municao >= 2;
   }
-
+  
   iaCombate(todos) {
     let alvo = null;
     let menorDist = Infinity;
@@ -5338,10 +5338,38 @@ class Brawler {
     if (alvo && menorDist < 540) {
       let temVisao = this.tipo === "BARLEY" ? true : this.temLinhaDeVisao(alvo.x, alvo.y);
       let angAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
+      let poucaVida = this.vida < this.vidaMax * 0.35;
 
-      if (this.vida < this.vidaMax * 0.3 && menorDist < 220) {
-        let angFuga = angAlvo + PI;
-        this.navegarPara(this.x + cos(angFuga) * 140, this.y + sin(angFuga) * 140, 1.0);
+      if (poucaVida && menorDist <= 220) {
+        // PERTO COM POUCA VIDA: arrisca e vai pra cima com tudo!
+        this.navegarPara(alvo.x, alvo.y, 1.05);
+        this.angulo = angAlvo;
+
+        let alcanceDisparo = this.tipo === "ASH" ? 135 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 330));
+        if (menorDist <= alcanceDisparo && temVisao) {
+          if (this.tipo === "BARLEY") {
+            this.angulo = this.calcularAlvoPreditivoBarley(alvo).angulo;
+          }
+          if (this.municao >= 1) this.atacar();
+          if (this.superCarga >= 100) this.usarSuper();
+        }
+        return;
+      } else if (poucaVida && menorDist > 220) {
+        // LONGE COM POUCA VIDA: foge em zigue-zague e desvia de tiros próximos
+        let angFuga = angAlvo + PI + sin(frameCount * 0.22) * 0.72;
+
+        for (let p of projeteis) {
+          if (p.time !== this.time && p.vida > 0 && dist(this.x, this.y, p.x, p.y) < 160) {
+            let angParaMim = atan2(this.y - p.y, this.x - p.x);
+            let diff = atan2(sin(angParaMim - p.angulo), cos(angParaMim - p.angulo));
+            if (abs(diff) < 0.7) {
+              angFuga = p.angulo + (diff >= 0 ? HALF_PI : -HALF_PI);
+              break;
+            }
+          }
+        }
+
+        this.navegarPara(this.x + cos(angFuga) * 150, this.y + sin(angFuga) * 150, 1.0);
         this.angulo = angAlvo;
       } else if (!temVisao) {
         let angMov = this.navegarPara(alvo.x, alvo.y, 0.92);
@@ -5367,7 +5395,7 @@ class Brawler {
         } else {
           this.angulo = angAlvo;
         }
-          if (this.podeAtirarTaticamente(alvo, menorDist, alcanceDisparo)) {
+        if (this.podeAtirarTaticamente(alvo, menorDist, alcanceDisparo)) {
           if (this.delayReacao > 0) {
             this.delayReacao--;
           } else {
@@ -5375,8 +5403,8 @@ class Brawler {
             this.delayReacao = Math.floor(random(22, 46));
           }
         }
-        
-          if (this.superCarga >= 100) {
+
+        if (this.superCarga >= 100) {
           if (this.delaySuperBot > 0) {
             this.delaySuperBot--;
           } else {
@@ -5399,18 +5427,25 @@ class Brawler {
     }
   }
 
-  iaFutebrawl(bolaObj, meusAliados, meusInimigos) {
+    iaFutebrawl(bolaObj, meusAliados, meusInimigos) {
     let golInimigoX = this.time === "AZUL" ? mundoLargura - 20 : 20;
     let meioY = mundoAltura / 2;
 
     let maisPerto = null;
     let menorD = Infinity;
+    let inimigosBloqueando = 0;
+
     for (let ini of meusInimigos) {
       if (ini.vida > 0) {
         let d = dist(this.x, this.y, ini.x, ini.y);
         if (d < menorD) {
           menorD = d;
           maisPerto = ini;
+        }
+        // Conta quantos inimigos vivos estão à frente impedindo o caminho até o gol
+        let naFrente = this.time === "AZUL" ? (ini.x >= this.x - 60) : (ini.x <= this.x + 60);
+        if (naFrente) {
+          inimigosBloqueando++;
         }
       }
     }
@@ -5429,6 +5464,14 @@ class Brawler {
 
       if (distParaGol < 215 && this.temLinhaDeVisao(golInimigoX, alvoGolY)) {
         this.angulo = angGol;
+        this.atacar();
+        return;
+      }
+
+      // Se 2 ou 3 inimigos estiverem bloqueando a frente, solta a bola para matar eles primeiro
+      if (inimigosBloqueando >= 2 && maisPerto && menorD < 260 && distParaGol > 165) {
+        let angParaIni = atan2(maisPerto.y - this.y, maisPerto.x - this.x);
+        this.angulo = angParaIni + (this.y > meioY ? -HALF_PI * 0.7 : HALF_PI * 0.7);
         this.atacar();
         return;
       }
@@ -5466,33 +5509,49 @@ class Brawler {
 
     this.tempoComBola = 0;
 
-    let souMaisPertoDaBola = true;
-    let minhaDistBola = dist(this.x, this.y, bolaObj.x, bolaObj.y);
-    for (let al of meusAliados) {
-      if (al !== this && al.vida > 0) {
-        if (dist(al.x, al.y, bolaObj.x, bolaObj.y) < minhaDistBola - 15) {
-          souMaisPertoDaBola = false;
-          break;
-        }
-      }
-    }
+    // Se houver 2 ou 3 inimigos na frente impedindo o gol, ignora a bola e vai matar até sobrar 1 ou 0
+    let limparCaminhoPrimeiro = inimigosBloqueando >= 2 && maisPerto && (!bolaObj.posse || bolaObj.posse.time !== this.time);
 
     let destX = bolaObj.x;
     let destY = bolaObj.y;
 
-    if (bolaObj.posse && bolaObj.posse.time === this.time) {
+    if (limparCaminhoPrimeiro) {
+      let alcanceIdeal = this.tipo === "COLT" ? 250 : (this.tipo === "BARLEY" ? 220 : 85);
+      let angIni = atan2(maisPerto.y - this.y, maisPerto.x - this.x);
+      if (menorD > alcanceIdeal) {
+        destX = maisPerto.x;
+        destY = maisPerto.y;
+      } else {
+        let angStrafe = angIni + HALF_PI * this.ladoContornoBot;
+        destX = this.x + cos(angStrafe) * 90;
+        destY = this.y + sin(angStrafe) * 90;
+      }
+    } else if (bolaObj.posse && bolaObj.posse.time === this.time) {
       let avanco = this.time === "AZUL" ? 130 : -130;
       destX = constrain(bolaObj.posse.x + avanco, 110, mundoLargura - 110);
       destY = constrain(this.zonaPreferidaY + sin(frameCount * 0.03) * 45, 90, mundoAltura - 90);
-    } else if (!souMaisPertoDaBola) {
-      let recuoDefesa = this.time === "AZUL" ? -95 : 95;
-      destX = constrain(bolaObj.x + recuoDefesa, 110, mundoLargura - 110);
-      destY = lerp(bolaObj.y, this.zonaPreferidaY, 0.55);
+    } else {
+      let souMaisPertoDaBola = true;
+      let minhaDistBola = dist(this.x, this.y, bolaObj.x, bolaObj.y);
+      for (let al of meusAliados) {
+        if (al !== this && al.vida > 0) {
+          if (dist(al.x, al.y, bolaObj.x, bolaObj.y) < minhaDistBola - 15) {
+            souMaisPertoDaBola = false;
+            break;
+          }
+        }
+      }
+
+      if (!souMaisPertoDaBola) {
+        let recuoDefesa = this.time === "AZUL" ? -95 : 95;
+        destX = constrain(bolaObj.x + recuoDefesa, 110, mundoLargura - 110);
+        destY = lerp(bolaObj.y, this.zonaPreferidaY, 0.55);
+      }
     }
 
-    let angMov = this.navegarPara(destX, destY, 0.92);
+    let angMov = this.navegarPara(destX, destY, 0.94);
 
-    if (maisPerto && menorD < 340) {
+    if (maisPerto && menorD < 360) {
       let angIni = atan2(maisPerto.y - this.y, maisPerto.x - this.x);
       let temVisao = this.tipo === "BARLEY" ? true : this.temLinhaDeVisao(maisPerto.x, maisPerto.y);
       let alcanceDisparo = this.tipo === "ASH" ? 135 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 320));
@@ -5504,7 +5563,8 @@ class Brawler {
         } else {
           this.angulo = angIni;
         }
-          if (this.podeAtirarTaticamente(maisPerto, menorD, alcanceDisparo, bolaObj)) {
+
+        if (this.podeAtirarTaticamente(maisPerto, menorD, alcanceDisparo, bolaObj)) {
           if (this.delayReacao > 0) {
             this.delayReacao--;
           } else {
