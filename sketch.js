@@ -4933,116 +4933,7 @@ class Brawler {
       this.tempoSemDano = 0;
       this.timerCura = 0;
     }
-
-    // Super do Trunk: avança e, ao tocar em um inimigo, fica enganchado nele causando dano contínuo até sair/morrer/matar
-    if (this.dashTimer > 0) {
-      this.dashTimer--;
-      let todos = [jogador, ...aliados, ...inimigos];
-
-      // Verifica se o alvo enganchado ainda está vivo
-      if (this.alvoEnganchadoTrunk && this.alvoEnganchadoTrunk.vida <= 0) {
-        this.alvoEnganchadoTrunk = null;
-      }
-
-      if (this.alvoEnganchadoTrunk) {
-        let alvo = this.alvoEnganchadoTrunk;
-        let angParaAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
-        this.angulo = angParaAlvo;
-
-        // Mantém Trunk enganchado bem colado no brawler inimigo, acompanhando seu movimento
-        let distIdeal = this.raio + alvo.raio - 4;
-        let destX = constrain(alvo.x - cos(this.dashAngulo) * distIdeal, 32, mundoLargura - 32);
-        let destY = constrain(alvo.y - sin(this.dashAngulo) * distIdeal, 65, mundoAltura - 32);
-
-        if (!this.colideObstaculo(destX, destY)) {
-          this.x = lerp(this.x, destX, 0.55);
-          this.y = lerp(this.y, destY, 0.55);
-        }
-
-        // Empurra levemente o inimigo junto no impacto
-        let empurraoX = constrain(alvo.x + cos(this.dashAngulo) * 2.2, 32, mundoLargura - 32);
-        let empurraoY = constrain(alvo.y + sin(this.dashAngulo) * 2.2, 65, mundoAltura - 32);
-        if (!alvo.colideObstaculo(empurraoX, alvo.y)) alvo.x = empurraoX;
-        if (!alvo.colideObstaculo(alvo.x, empurraoY)) alvo.y = empurraoY;
-
-        this.vxAtual = 0;
-        this.vyAtual = 0;
-
-        // Aplica ticks contínuos de dano enquanto enganchado
-        if (this.tickEngancheTrunk <= 0) {
-          alvo.receberDano(260, color(255, 130, 15), true, this);
-          this.tickEngancheTrunk = 5;
-
-          for (let k = 0; k < 4; k++) {
-            particulas.push({
-              x: alvo.x + random(-10, 10),
-              y: alvo.y + random(-10, 10),
-              vx: random(-3, 3),
-              vy: random(-3, 3),
-              tam: random(4, 7),
-              cor: color(255, 155, 35, 220),
-              vida: 12
-            });
-          }
-        } else {
-          this.tickEngancheTrunk--;
-        }
-
-        if (this.dashTimer % 3 === 0) {
-          pocasTerra.push(new PocaTerraTrunk(this.x, this.y, 44, this.time));
-        }
-
-        if (this.dashTimer <= 0) {
-          this.alvoEnganchadoTrunk = null;
-        }
-      } else {
-        // Ainda avançando no dash procurando enganchar em um inimigo
-        let velDash = 9.2;
-        let dirX = cos(this.dashAngulo);
-        let dirY = sin(this.dashAngulo);
-
-        let nx = this.x + dirX * velDash;
-        if (this.colideObstaculo(nx, this.y) || nx < 32 || nx > mundoLargura - 32) {
-          dirX *= -1;
-          this.dashAngulo = atan2(dirY, dirX);
-        } else {
-          this.x = nx;
-        }
-
-        let ny = this.y + dirY * velDash;
-        if (this.colideObstaculo(this.x, ny) || ny < 65 || ny > mundoAltura - 32) {
-          dirY *= -1;
-          this.dashAngulo = atan2(dirY, dirX);
-        } else {
-          this.y = ny;
-        }
-
-        this.angulo = this.dashAngulo;
-
-        if (this.dashTimer % 3 === 0) {
-          pocasTerra.push(new PocaTerraTrunk(this.x, this.y, 44, this.time));
-        }
-
-        // Verifica colisão com rato do Ash durante o dash
-        for (let rt of ratosAsh) {
-          if (rt.time !== this.time && rt.vida > 0 && dist(this.x, this.y, rt.x, rt.y) <= this.raio + rt.raio) {
-            rt.receberDano(300, this);
-          }
-        }
-
-        // Verifica colisão com brawler inimigo para ENGANCHAR nele
-        for (let a of todos) {
-          if (a !== this && a.time !== this.time && a.vida > 0) {
-            if (dist(this.x, this.y, a.x, a.y) <= this.raio + a.raio + 5) {
-              this.alvoEnganchadoTrunk = a;
-              this.tickEngancheTrunk = 0;
-              break;
-            }
-          }
-        }
-      }
-    }
-
+    
     if (this.municao < 3) {
       let tempoRec = this.obterTempoRecarga();
       this.recarga++;
@@ -5185,11 +5076,11 @@ class Brawler {
       let alvoY = constrain(this.y + sin(this.angulo) * alcanceGaiola, 75, mundoAltura - 45);
       gaiolasAsh.push(new GaiolaRatosAsh(this.x, this.y, alvoX, alvoY, this.time, this));
     } else if (this.tipo === "TRUNK") {
-      this.dashTimer = 30;
+      this.dashTimer = 150;
+      this.dashDistanciaRestante = 275;
       this.dashAngulo = this.angulo;
-      this.alvoEnganchadoTrunk = null;
       this.tickEngancheTrunk = 0;
-      this.alvosIgnoradosTrunk = [];
+      this.distPocaTrunk = 0;
     } else if (this.tipo === "COLT") {
       this.anguloSuperTravado = this.angulo;
       this.filaDisparosColt = [];
