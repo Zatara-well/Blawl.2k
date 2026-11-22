@@ -6135,7 +6135,7 @@ class RatoAsh {
           if (dist(this.x, this.y, b.x, b.y) <= b.raio + this.raio) {
             b.receberDano(this.dano, color(255, 210, 60), false, this.dono);
             if (this.dono && this.dono.vida > 0) {
-              this.dono.superCarga = min(100, this.dono.superCarga + 10);
+              this.dono.superCarga = min(100, this.dono.superCarga + 5);
               this.dono.ganharFuria(10);
             }
             this.explodir(true);
@@ -6353,8 +6353,12 @@ class PocaBarley {
         if (dist(this.x, this.y, b.x, b.y) <= this.raio + b.raio * 0.65) {
           listaJaAtingidos.push(b);
           b.receberDano(this.danoTick, color(215, 120, 255), false, this.dono);
-          if (this.dono && this.dono.vida > 0) {
-            this.dono.superCarga = min(100, this.dono.superCarga + 14.3);
+            if (this.dono && this.dono.vida > 0) {
+            if (this.ehSuper) {
+              this.dono.superCarga = min(100, this.dono.superCarga + 4.5); // Super carrega pouco
+            } else {
+              this.dono.superCarga = min(100, this.dono.superCarga + 10);  // Ataque normal (10 acertos)
+            }
           }
         }
       }
