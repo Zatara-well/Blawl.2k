@@ -5182,7 +5182,7 @@ class Brawler {
         offsetLateral: -8,
         vel: 12.8,
         alcance: 430,
-        dano: 300,
+        dano: 200,
         estilo: "COLT_SUPER",
         ehSuper: true
       });
@@ -5194,7 +5194,7 @@ class Brawler {
           offsetLateral: lado,
           vel: 12.8,
           alcance: 430,
-          dano: 300,
+          dano: 200,
           estilo: "COLT_SUPER",
           ehSuper: true
         });
@@ -6526,7 +6526,7 @@ class Projetil {
           b.receberDano(this.dano, color(255, 255, 255), false, this.dono);
           if (this.dono && this.dono.vida > 0) {
             if (this.estilo === "COLT_NORMAL") {
-              this.dono.superCarga = min(100, this.dono.superCarga + 8.34);
+              this.dono.superCarga = min(100, this.dono.superCarga + 5.34);
             } else if (this.estilo === "COLT_SUPER") {
               this.dono.superCarga = min(100, this.dono.superCarga + 5);
             }
