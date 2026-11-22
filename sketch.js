@@ -5864,7 +5864,9 @@ class OndaCircularTrunk {
           b.receberDano(danoFinal, corTexto, ehCritico, this.dono);
 
           if (ehCritico) {
-            this.dono.superCarga = min(100, this.dono.superCarga + 16.7);
+            this.dono.superCarga = min(100, this.dono.superCarga + 16.7); // Crítico: 6 acertos
+          } else {
+            this.dono.superCarga = min(100, this.dono.superCarga + 12.5); // Normal: 8 acertos
           }
 
           for (let k = 0; k < (ehCritico ? 10 : 4); k++) {
