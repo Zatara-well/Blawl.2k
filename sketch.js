@@ -5287,6 +5287,28 @@ class Brawler {
 
     return angDesejado;
   }
+  
+  podeAtirarTaticamente(alvo, distancia, alcanceMax, bolaObj = null) {
+    if (this.municao < 1) return false;
+
+    // 1. OCASIÃO DE TUDO OU NADA (pode gastar até a última munição):
+    let alvoQuaseMorrendo = alvo.vida <= this.calcularDanoAtual() * 2.5 || alvo.vida < alvo.vidaMax * 0.35;
+    let inimigoMuitoPerto = distancia <= alcanceMax * 0.55;
+    let inimigoComBola = bolaObj && bolaObj.posse === alvo;
+    let ashFuriaMaxima = this.tipo === "ASH" && this.furia > 66;
+
+    if (alvoQuaseMorrendo || inimigoMuitoPerto || inimigoComBola || ashFuriaMaxima) {
+      return true;
+    }
+
+    // 2. PONTA DO ALCANCE (muito longe): só dá tiro de sondagem se estiver com 3 balas cheias
+    if (distancia > alcanceMax * 0.85) {
+      return this.municao >= 3;
+    }
+
+    // 3. TROCA NORMAL (média distância): atira, mas sempre guarda 1 munição de reserva
+    return this.municao >= 2;
+  }
 
   iaCombate(todos) {
     let alvo = null;
@@ -5345,14 +5367,16 @@ class Brawler {
         } else {
           this.angulo = angAlvo;
         }
-        if (this.delayReacao > 0) {
-          this.delayReacao--;
-        } else {
-          this.atacar();
-          this.delayReacao = Math.floor(random(24, 52));
+          if (this.podeAtirarTaticamente(alvo, menorDist, alcanceDisparo)) {
+          if (this.delayReacao > 0) {
+            this.delayReacao--;
+          } else {
+            this.atacar();
+            this.delayReacao = Math.floor(random(22, 46));
+          }
         }
-
-        if (this.superCarga >= 100) {
+        
+          if (this.superCarga >= 100) {
           if (this.delaySuperBot > 0) {
             this.delaySuperBot--;
           } else {
@@ -5480,11 +5504,13 @@ class Brawler {
         } else {
           this.angulo = angIni;
         }
-        if (this.delayReacao > 0) {
-          this.delayReacao--;
-        } else {
-          this.atacar();
-          this.delayReacao = Math.floor(random(22, 46));
+          if (this.podeAtirarTaticamente(maisPerto, menorD, alcanceDisparo, bolaObj)) {
+          if (this.delayReacao > 0) {
+            this.delayReacao--;
+          } else {
+            this.atacar();
+            this.delayReacao = Math.floor(random(20, 42));
+          }
         }
 
         if (this.superCarga >= 100 && (!bolaObj.posse || bolaObj.posse.time !== this.time)) {
