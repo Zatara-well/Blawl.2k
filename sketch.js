@@ -5026,7 +5026,7 @@ class Brawler {
       }
     }
     
-    if (this.municao < 3) {
+    if (this.municao < 3 && !this.estaAtacandoAgora()) {
       let tempoRec = this.obterTempoRecarga();
       this.recarga++;
       if (this.recarga >= tempoRec) {
@@ -5046,7 +5046,8 @@ class Brawler {
     }
 
     if (this.tipo === "TRUNK" && this.delayAtaqueTrunk > 0) return;
-
+    if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) return;
+    
     if (this.municao < 1 || this.cooldownAtaque > 0) return;
     this.municao--;
     this.cooldownAtaque = this.tipo === "COLT" ? 26 : 18;
@@ -5154,7 +5155,8 @@ class Brawler {
       this.animAtaque = 1.2;
       return;
     }
-
+    if (this.tipo === "COLT" && (this.filaDisparosColt.length > 0 || this.cooldownAtaque > 12)) return;
+    
     this.superCarga = 0;
     this.animAtaque = 1.2;
 
@@ -5173,10 +5175,11 @@ class Brawler {
       this.dashAngulo = this.angulo;
       this.tickEngancheTrunk = 0;
       this.distPocaTrunk = 0;
-    } else if (this.tipo === "COLT") {
+     } else if (this.tipo === "COLT") {
+      this.cooldownAtaque = 28;
       this.anguloSuperTravado = this.angulo;
       this.filaDisparosColt = [];
-
+      
       // Dispara a 1ª bala da Super imediatamente e as outras 11 a cada 2 frames (rajada contínua)
       this.dispararBalaColt({
         offsetLateral: -8,
@@ -5350,8 +5353,15 @@ class Brawler {
           if (this.tipo === "BARLEY") {
             this.angulo = this.calcularAlvoPreditivoBarley(alvo).angulo;
           }
-          if (this.municao >= 1) this.atacar();
-          if (this.superCarga >= 100) this.usarSuper();
+          if (this.delayReacao > 0) {
+            this.delayReacao--;
+          } else if (this.superCarga >= 100 && !this.estaAtacandoAgora()) {
+            this.usarSuper();
+            this.delayReacao = Math.floor(random(22, 36));
+          } else if (this.municao >= 1 && !this.estaAtacandoAgora()) {
+            this.atacar();
+            this.delayReacao = Math.floor(random(22, 36));
+          }
         }
         return;
       } else if (poucaVida && menorDist > 220) {
