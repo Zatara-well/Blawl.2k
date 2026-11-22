@@ -2463,8 +2463,13 @@ function desenharTelaModos() {
   text("CONFIRMAR", width / 2, 470);
 }
 
-function tratarCliqueCanvas(e, toqueX, toqueY) {
+  function tratarCliqueCanvas(e, toqueX, toqueY) {
   window.focus();
+  if (toqueX === undefined) {
+    ehMobile = false;
+  }
+  let cx = toqueX !== undefined ? toqueX : mouseX;
+  let cy = toqueY !== undefined ? toqueY : mouseY;
   let cx = toqueX !== undefined ? toqueX : mouseX;
   let cy = toqueY !== undefined ? toqueY : mouseY;
   let ehBotaoDireito = (e && e.button === 2) || mouseButton === RIGHT || mouseButton === "right";
@@ -6788,11 +6793,9 @@ let joyDir = { ativo: false, id: -1, baseX: 735, baseY: 485, knobX: 735, knobY: 
 let joySuper = { ativo: false, id: -1, baseX: 625, baseY: 515, knobX: 625, knobY: 515, dx: 0, dy: 0, raio: 38 };
 
 function detectarDispositivoMobile() {
-  return (
-    "ontouchstart" in window ||
-    navigator.maxTouchPoints > 0 ||
-    window.innerWidth <= 950
-  );
+  const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const ponteiroDedo = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  return uaMobile || (ponteiroDedo && window.innerWidth <= 950);
 }
 
 function registrarEventosTouchCanvas() {
