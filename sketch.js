@@ -2470,8 +2470,6 @@ function desenharTelaModos() {
   }
   let cx = toqueX !== undefined ? toqueX : mouseX;
   let cy = toqueY !== undefined ? toqueY : mouseY;
-  let cx = toqueX !== undefined ? toqueX : mouseX;
-  let cy = toqueY !== undefined ? toqueY : mouseY;
   let ehBotaoDireito = (e && e.button === 2) || mouseButton === RIGHT || mouseButton === "right";
 
   if (estadoJogo === "NOME_INICIAL") {
