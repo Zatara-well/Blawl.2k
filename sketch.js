@@ -4933,6 +4933,11 @@ class Brawler {
       this.tempoSemDano = 0;
       this.timerCura = 0;
     }
+      this.dashTimer = 150;
+      this.dashDistanciaRestante = 275;
+      this.dashAngulo = this.angulo;
+      this.tickEngancheTrunk = 0;
+      this.distPocaTrunk = 0;
     
     if (this.municao < 3) {
       let tempoRec = this.obterTempoRecarga();
