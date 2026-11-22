@@ -4983,9 +4983,9 @@ class Brawler {
       this.dashDistanciaRestante -= velDash;
 
       this.distPocaTrunk = (this.distPocaTrunk || 0) + velDash;
-      if (this.distPocaTrunk >= 28) {
+      if (this.distPocaTrunk >= 68) {
         this.distPocaTrunk = 0;
-        pocasTerra.push(new PocaTerraTrunk(this.x, this.y, 44, this.time));
+        pocasTerra.push(new PocaTerraTrunk(this.x, this.y, 58, this.time));
       }
 
       for (let rt of ratosAsh) {
