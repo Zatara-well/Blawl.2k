@@ -5365,9 +5365,9 @@ class Brawler {
         let distCobertura = dist(this.x, this.y, cobertura.x, cobertura.y);
         if (distCobertura <= 20) {
           let angLateral = angAlvo + HALF_PI;
-          let ox = cos(angLateral) * sin(frameCount * 0.05) * 0.55;
-          let oy = sin(angLateral) * sin(frameCount * 0.05) * 0.55;
-          this.aplicarMovimento(ox, oy);
+          let ox = cos(angLateral) * sin(frameCount * 0.05) * 35;
+          let oy = sin(angLateral) * sin(frameCount * 0.05) * 35;
+          this.navegarPara(this.x + ox, this.y + oy, 0.45);
           this.angulo = angAlvo;
           return;
         } else {
