@@ -8,6 +8,7 @@ let estatisticasPartida = [];
 
 // Controle de passo fixo (60Hz) para evitar velocidade 2X em telas 90Hz/120Hz/144Hz
 let acumuladorTempo = 0;
+let ultimoTempoReal = 0;
 const PASSO_FIXO_MS = 1000 / 60;
 
 // Sistema de Tela Cheia / Proporção no PC (tecla ESC)
@@ -278,7 +279,6 @@ function confirmarNickname() {
 }
 
 function setup() {
-  frameRate(60);
   cnv = createCanvas(850, 600);
   if (document.getElementById("jogo-container")) {
     cnv.parent("jogo-container");
@@ -359,9 +359,11 @@ function mouseWheel(event) {
 
 function draw() {
   background(40, 140, 60);
-
-  let dt = (typeof deltaTime === "number" && deltaTime > 0) ? min(deltaTime, 100) : PASSO_FIXO_MS;
-
+  
+  let agora = performance.now();
+  let dt = ultimoTempoReal > 0 ? min(agora - ultimoTempoReal, 50) : PASSO_FIXO_MS;
+  ultimoTempoReal = agora;
+  
   if (estadoJogo === "NOME_INICIAL") {
     acumuladorTempo = 0;
     desenharTelaNickname();
