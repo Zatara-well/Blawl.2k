@@ -4282,9 +4282,9 @@ function desenharHUD() {
     textAlign(LEFT, CENTER);
     let acertosTexto = "8 acertos";
     if (jogador.tipo === "ASH") acertosTexto = "7 acertos";
-    else if (jogador.tipo === "TRUNK") acertosTexto = "6 críticos";
+    else if (jogador.tipo === "TRUNK") acertosTexto = "8 acertos";
     else if (jogador.tipo === "COLT") acertosTexto = "12 balas";
-    else if (jogador.tipo === "BARLEY") acertosTexto = "7 acertos";
+    else if (jogador.tipo === "BARLEY") acertosTexto = "10 acertos";
 
     let comBola = modoSelecionado === "FUTEBRAWL" && bola && bola.posse === jogador;
     let labelSuper = "SUPER (" + acertosTexto + "):";
@@ -4601,32 +4601,32 @@ class Brawler {
     this.delaySuperBot = Math.floor(random(20, 45));
     this.zonaPreferidaY = y;
     this.tempoComBola = 0;
-
+                   // vida maxima velocidade e dano base!
     if (this.tipo === "ASH") {
       this.vidaMax = 4500;
-      this.velocidade = 2.95;
+      this.velocidade = 2.65;
       this.danoBase = 750;
     } else if (this.tipo === "TRUNK") {
       this.vidaMax = 5000;
-      this.velocidade = 3.1;
+      this.velocidade = 2.5;
       this.danoBase = 650;
     } else if (this.tipo === "COLT") {
       this.vidaMax = 2800;
-      this.velocidade = 3.2;
+      this.velocidade = 2.7;
       this.danoBase = 250;
     } else if (this.tipo === "BARLEY") {
       this.vidaMax = 2600;
-      this.velocidade = 2.95;
+      this.velocidade = 2.35;
       this.danoBase = 560;
     }
     this.vida = this.vidaMax;
   }
-
+                         // recargas dos brawlers!
   obterTempoRecarga() {
     if (this.tipo === "TRUNK") return 62; // 1,04s
     if (this.tipo === "ASH") return 62;   // 1,04s
     if (this.tipo === "BARLEY") return 68;// 1,13s
-    if (this.tipo === "COLT") return 62; //  1,04s
+    if (this.tipo === "COLT") return 60; //  1,00s
   }
 
   estaAtacandoAgora() {
