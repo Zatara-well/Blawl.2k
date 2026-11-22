@@ -4801,7 +4801,7 @@ class Brawler {
     }
 
         if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) {
-      this.angulo = this.filaDisparosColt[0].ehSuper ? this.anguloSuperTravado : 
+      this.angulo = this.filaDisparosColt[0].ehSuper ? this.anguloSuperTravado : this.anguloAtaqueTravado;
       this.anguloAtaqueTravado = 0;
       this.vxAtual = 0;
       this.vyAtual = 0;
@@ -4865,7 +4865,7 @@ class Brawler {
   }
 
   dispararBalaColt(itemDisparo) {
-    let angDisparo = itemDisparo.ehSuper ? this.anguloSuperTravado : this.angulo;
+    let angDisparo = itemDisparo.ehSuper ? this.anguloSuperTravado : this.anguloAtaqueTravado;
     let frenteX = cos(angDisparo) * 16;
     let frenteY = sin(angDisparo) * 16;
     let perpX = -sin(angDisparo) * itemDisparo.offsetLateral;
@@ -5134,6 +5134,11 @@ class Brawler {
     } else if (this.tipo === "TRUNK") {
       this.delayAtaqueTrunk = 30;
     } else if (this.tipo === "COLT") {
+      // Dispara a 1ª bala imediatamente e as outras 5 a cada 2 frames (cadência perfeitamente lisa)
+      this.dispararBalaColt({
+        } else if (this.tipo === "COLT") {
+      this.anguloAtaqueTravado = this.angulo;
+      this.filaDisparosColt = [];
       // Dispara a 1ª bala imediatamente e as outras 5 a cada 2 frames (cadência perfeitamente lisa)
       this.dispararBalaColt({
         offsetLateral: -7,
