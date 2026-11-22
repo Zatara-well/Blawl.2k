@@ -4627,6 +4627,7 @@ class Brawler {
     if (this.tipo === "ASH") return 62;   // 1,04s
     if (this.tipo === "BARLEY") return 68;// 1,13s
     if (this.tipo === "COLT") return 60; //  1,00s
+    return 60;
   }
 
   estaAtacandoAgora() {
@@ -5609,7 +5610,8 @@ class Brawler {
           return;
         }
       }
-
+    let destX = golInimigoX;
+    let destY = alvoGolY;
     let angMov = this.angulo;
     if (this.tipo === "BARLEY" && maisPerto && menorD < 315 && (!bolaObj.posse || bolaObj.posse.time === this.time || menorD < 235)) {
       this.moverBarleyTatico(maisPerto, menorD, false);
