@@ -98,7 +98,7 @@ const DADOS_BRAWLERS = [
     raridade: "RARO",
     corFaixa: [50, 205, 50],
     saude: "2800",
-    ataque: "6 x 320",
+    ataque: "6 x 250",
     superNome: "TREM-BALA",
     descCurta: "Rajada rápida de 6 balas",
     bio: "Todo mundo que visita o Starr Park quer ver o Colt de perto, pois o cara é boa-pinta, carismático e cheio de truques com suas pistolas. A única que não entende o sucesso dele é a Shelly."
@@ -4611,7 +4611,7 @@ class Brawler {
     } else if (this.tipo === "COLT") {
       this.vidaMax = 2800;
       this.velocidade = 3.2;
-      this.danoBase = 320;
+      this.danoBase = 250;
     } else if (this.tipo === "BARLEY") {
       this.vidaMax = 2600;
       this.velocidade = 2.95;
@@ -4622,9 +4622,9 @@ class Brawler {
 
   obterTempoRecarga() {
     if (this.tipo === "TRUNK") return 62; // 1,04s
-    if (this.tipo === "ASH") return 62;   // 1,03s
+    if (this.tipo === "ASH") return 62;   // 1,04s
     if (this.tipo === "BARLEY") return 68;// 1,13s
-    return 48; // COLT 0,80s
+    if (this.tipo === "COLT") return 62; //  1,04s
   }
 
   estaAtacandoAgora() {
@@ -5135,7 +5135,7 @@ class Brawler {
       // Dispara a 1ª bala imediatamente e as outras 5 a cada 2 frames (cadência perfeitamente lisa)
       this.dispararBalaColt({
         offsetLateral: -7,
-        vel: 12.2,
+        vel: 11.2,
         alcance: 345,
         dano: this.danoBase,
         estilo: "COLT_NORMAL",
@@ -5147,7 +5147,7 @@ class Brawler {
         this.filaDisparosColt.push({
           espera: 2,
           offsetLateral: lado,
-          vel: 12.2,
+          vel: 11.2,
           alcance: 345,
           dano: this.danoBase,
           estilo: "COLT_NORMAL",
@@ -5197,9 +5197,9 @@ class Brawler {
       // Dispara a 1ª bala da Super imediatamente e as outras 11 a cada 2 frames (rajada contínua)
       this.dispararBalaColt({
         offsetLateral: -8,
-        vel: 13.8,
+        vel: 14.8,
         alcance: 430,
-        dano: 320,
+        dano: 300,
         estilo: "COLT_SUPER",
         ehSuper: true
       });
@@ -5209,9 +5209,9 @@ class Brawler {
         this.filaDisparosColt.push({
           espera: 2,
           offsetLateral: lado,
-          vel: 13.8,
+          vel: 14.8,
           alcance: 430,
-          dano: 320,
+          dano: 300,
           estilo: "COLT_SUPER",
           ehSuper: true
         });
