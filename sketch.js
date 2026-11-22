@@ -4933,11 +4933,96 @@ class Brawler {
       this.tempoSemDano = 0;
       this.timerCura = 0;
     }
-      this.dashTimer = 150;
-      this.dashDistanciaRestante = 275;
-      this.dashAngulo = this.angulo;
-      this.tickEngancheTrunk = 0;
-      this.distPocaTrunk = 0;
+          // Super do Trunk: atravessa inimigos ficando extremamente lento e causando dano contínuo
+    if (this.dashTimer > 0) {
+      if (this.vida <= 0) {
+        this.dashTimer = 0;
+        this.dashDistanciaRestante = 0;
+        return;
+      }
+
+      this.dashTimer--;
+      let todos = [jogador, ...aliados, ...inimigos];
+
+      let inimigosNoContato = [];
+      for (let a of todos) {
+        if (a !== this && a.time !== this.time && a.vida > 0) {
+          if (dist(this.x, this.y, a.x, a.y) <= this.raio + a.raio + 4) {
+            inimigosNoContato.push(a);
+          }
+        }
+      }
+
+      let atravessandoInimigo = inimigosNoContato.length > 0;
+      let velDash = atravessandoInimigo ? 1.4 : 9.2;
+
+      let dirX = cos(this.dashAngulo);
+      let dirY = sin(this.dashAngulo);
+
+      let nx = this.x + dirX * velDash;
+      if (this.colideObstaculo(nx, this.y) || nx < 32 || nx > mundoLargura - 32) {
+        dirX *= -1;
+        this.dashAngulo = atan2(dirY, dirX);
+      } else {
+        this.x = nx;
+      }
+
+      let ny = this.y + dirY * velDash;
+      if (this.colideObstaculo(this.x, ny) || ny < 65 || ny > mundoAltura - 32) {
+        dirY *= -1;
+        this.dashAngulo = atan2(dirY, dirX);
+      } else {
+        this.y = ny;
+      }
+
+      this.angulo = this.dashAngulo;
+      this.vxAtual = cos(this.dashAngulo) * velDash;
+      this.vyAtual = sin(this.dashAngulo) * velDash;
+      this.dashDistanciaRestante -= velDash;
+
+      this.distPocaTrunk = (this.distPocaTrunk || 0) + velDash;
+      if (this.distPocaTrunk >= 28) {
+        this.distPocaTrunk = 0;
+        pocasTerra.push(new PocaTerraTrunk(this.x, this.y, 44, this.time));
+      }
+
+      for (let rt of ratosAsh) {
+        if (rt.time !== this.time && rt.vida > 0 && dist(this.x, this.y, rt.x, rt.y) <= this.raio + rt.raio) {
+          rt.receberDano(300, this);
+        }
+      }
+
+      if (atravessandoInimigo) {
+        if (this.tickEngancheTrunk <= 0) {
+          for (let alvo of inimigosNoContato) {
+            if (this.vida <= 0) break;
+            alvo.receberDano(260, color(255, 130, 15), true, this);
+
+            for (let k = 0; k < 4; k++) {
+              particulas.push({
+                x: alvo.x + random(-10, 10),
+                y: alvo.y + random(-10, 10),
+                vx: random(-3, 3),
+                vy: random(-3, 3),
+                tam: random(4, 7),
+                cor: color(255, 155, 35, 220),
+                vida: 12
+              });
+            }
+          }
+          this.tickEngancheTrunk = 5;
+        } else {
+          this.tickEngancheTrunk--;
+        }
+      } else {
+        this.tickEngancheTrunk = 0;
+      }
+
+      if (this.dashDistanciaRestante <= 0 || this.dashTimer <= 0) {
+        this.dashTimer = 0;
+        this.dashDistanciaRestante = 0;
+      }
+    }
     
     if (this.municao < 3) {
       let tempoRec = this.obterTempoRecarga();
