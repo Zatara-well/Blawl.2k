@@ -5128,15 +5128,10 @@ class Brawler {
       }
     } else if (this.tipo === "TRUNK") {
       this.delayAtaqueTrunk = 30;
-      // Dispara a 1ª bala imediatamente e as outras 5 a cada 2 frames (cadência perfeitamente lisa)
-      this.dispararBalaColt({
-        } else if (this.tipo === "COLT") {
-      if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) {
-      this.angulo = this.filaDisparosColt[0].ehSuper ? this.anguloSuperTravado : this.anguloAtaqueTravado;
-      return;
-    }
+    } else if (this.tipo === "COLT") {
       this.anguloAtaqueTravado = this.angulo;
       this.filaDisparosColt = [];
+
       // Dispara a 1ª bala imediatamente e as outras 5 a cada 2 frames (cadência perfeitamente lisa)
       this.dispararBalaColt({
         offsetLateral: -7,
