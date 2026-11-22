@@ -5118,7 +5118,7 @@ class Brawler {
       // Dispara a 1ª bala imediatamente e as outras 5 a cada 2 frames (cadência perfeitamente lisa)
       this.dispararBalaColt({
         offsetLateral: -7,
-        vel: 11.2,
+        vel: 10.2,
         alcance: 345,
         dano: this.danoBase,
         estilo: "COLT_NORMAL",
@@ -5130,7 +5130,7 @@ class Brawler {
         this.filaDisparosColt.push({
           espera: 2,
           offsetLateral: lado,
-          vel: 11.2,
+          vel: 10.2,
           alcance: 345,
           dano: this.danoBase,
           estilo: "COLT_NORMAL",
@@ -5180,7 +5180,7 @@ class Brawler {
       // Dispara a 1ª bala da Super imediatamente e as outras 11 a cada 2 frames (rajada contínua)
       this.dispararBalaColt({
         offsetLateral: -8,
-        vel: 14.8,
+        vel: 12.8,
         alcance: 430,
         dano: 300,
         estilo: "COLT_SUPER",
@@ -5192,7 +5192,7 @@ class Brawler {
         this.filaDisparosColt.push({
           espera: 2,
           offsetLateral: lado,
-          vel: 14.8,
+          vel: 12.8,
           alcance: 430,
           dano: 300,
           estilo: "COLT_SUPER",
