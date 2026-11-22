@@ -86,7 +86,7 @@ const DADOS_BRAWLERS = [
     classe: "TANQUE",
     raridade: "ÉPICO",
     corFaixa: [175, 55, 225],
-    saude: "4800",
+    saude: "5000",
     ataque: "650",
     superNome: "MOVIDO A VINGANÇA",
     descCurta: "Terra dá +dano e +vel • Super engancha",
@@ -4607,7 +4607,7 @@ class Brawler {
       this.velocidade = 2.95;
       this.danoBase = 750;
     } else if (this.tipo === "TRUNK") {
-      this.vidaMax = 4800;
+      this.vidaMax = 5000;
       this.velocidade = 3.1;
       this.danoBase = 650;
     } else if (this.tipo === "COLT") {
