@@ -6663,6 +6663,7 @@ class Projetil {
     this.dono = dono;
     this.vida = 1;
     this.rastro = [];
+    this.atingidos = [];
     this.raio = estilo === "COLT_SUPER" ? 11 : 7;
   }
 
@@ -6707,9 +6708,10 @@ class Projetil {
     }
 
     // Verifica colisão com os ratos do Ash
-    for (let rt of ratosAsh) {
-      if (rt.time !== this.time && rt.vida > 0) {
-        if (dist(this.x, this.y, rt.x, rt.y) < rt.raio + this.raio) {
+     for (let rt of ratosAsh) {
+       if (rt.time !== this.time && rt.vida > 0 && !this.atingidos.includes(rt)) {
+         if (dist(this.x, this.y, rt.x, rt.y) < rt.raio + this.raio) {
+           this.atingidos.push(rt);
           rt.receberDano(this.dano, this.dono);
           if (this.estilo !== "COLT_SUPER") {
             this.vida = 0;
@@ -6720,8 +6722,9 @@ class Projetil {
     }
 
     for (let b of todos) {
-      if (b.time !== this.time && b.vida > 0) {
+      if (b.time !== this.time && b.vida > 0 && !this.atingidos.includes(b)) {
         if (dist(this.x, this.y, b.x, b.y) < b.raio + this.raio) {
+          this.atingidos.push(b);
           b.receberDano(this.dano, color(255, 255, 255), false, this.dono);
           if (this.dono && this.dono.vida > 0) {
             if (this.estilo === "COLT_NORMAL") {
