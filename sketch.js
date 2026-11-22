@@ -4800,8 +4800,8 @@ class Brawler {
       return;
     }
 
-    if (this.tipo === "COLT" && this.filaDisparosColt.length > 0 && this.filaDisparosColt[0].ehSuper) {
-      this.angulo = this.anguloSuperTravado;
+        if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) {
+      this.angulo = this.filaDisparosColt[0].ehSuper ? this.anguloSuperTravado : this.anguloAtaqueTravado;
       return;
     }
 
