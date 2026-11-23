@@ -5403,7 +5403,8 @@ class Brawler {
                   tipo: "CURA",
                   alvoRef: this,
                   offsetY: 45
-              });
+                });
+              }
             }
           }
         }
