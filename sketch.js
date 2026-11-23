@@ -7323,7 +7323,6 @@ function registrarEventosTouchCanvas() {
   }, { passive: false });
 
   function encerrarToques(e) {
-    e.preventDefault();
     if (estadoJogo === "MAP_MAKER") {
       arrastandoCameraEditor = false;
       salvarMapaCustom();
@@ -7380,9 +7379,9 @@ function registrarEventosTouchCanvas() {
       }
     }
   }
-
-  cnv.elt.addEventListener("touchend", encerrarToques, { passive: false });
-  cnv.elt.addEventListener("touchcancel", encerrarToques, { passive: false });
+  
+  window.addEventListener("touchend", encerrarToques, { passive: false });
+  window.addEventListener("touchcancel", encerrarToques, { passive: false });
 }
 
 function atualizarKnobJoystick(joy, tx, ty) {
