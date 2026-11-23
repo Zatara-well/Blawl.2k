@@ -2868,6 +2868,7 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
     }
   } else if (estadoJogo === "MAP_MAKER") {
     if (cy <= 54) {
+      arrastandoCameraEditor = false;
       if (cx >= 14 && cx <= 100 && cy >= 9 && cy <= 45) {
         salvarMapaCustom();
         estadoJogo = "MENU";
@@ -2926,7 +2927,8 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
   }
 }
 
-function mouseDragged() {
+ function mouseDragged() {
+  if (ehMobile || touches.length > 0) return;
   if (estadoJogo !== "MAP_MAKER") return;
   if (arrastandoCameraEditor) {
     camEditorX -= mouseX - ultimoArrastoX;
@@ -2939,6 +2941,7 @@ function mouseDragged() {
 }
 
 function mouseReleased() {
+  if (ehMobile || touches.length > 0) return;
   if (estadoJogo === "MAP_MAKER") {
     arrastandoCameraEditor = false;
     salvarMapaCustom();
@@ -7321,8 +7324,11 @@ function registrarEventosTouchCanvas() {
 
   function encerrarToques(e) {
     e.preventDefault();
+    if (estadoJogo === "MAP_MAKER") {
+      arrastandoCameraEditor = false;
+      salvarMapaCustom();
+    }
     for (let i = 0; i < e.changedTouches.length; i++) {
-      let t = e.changedTouches[i];
 
       if (joyEsq.ativo && t.identifier === joyEsq.id) {
         joyEsq.ativo = false;
