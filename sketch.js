@@ -3532,8 +3532,11 @@ function atualizarJogo() {
   }
 
   for (let i = textosFlutuantes.length - 1; i >= 0; i--) {
-    textosFlutuantes[i].y -= 1.25;
+    textosFlutuantes[i].y -= 1.15;
     textosFlutuantes[i].vida--;
+    if (textosFlutuantes[i].tempoAcumulo > 0) {
+      textosFlutuantes[i].tempoAcumulo--;
+    }
     if (textosFlutuantes[i].vida <= 0) textosFlutuantes.splice(i, 1);
   }
 
@@ -3818,15 +3821,52 @@ function bolaColideObstaculo(bx, by) {
   return circuloColideObstaculo(bx, by, raioBola);
 }
 
-function criarTextoDano(x, y, valor, cor, ehCritico = false) {
+function criarTextoDano(x, y, valor, cor, ehCritico = false, opcoes = {}) {
+  let tipo = opcoes.tipo || "AVISO";
+  let alvoRef = opcoes.alvoRef || null;
+  let offsetY = opcoes.offsetY || 58;
+  let ehNumero = typeof valor === "number";
+
+  if (ehNumero && alvoRef && (tipo === "DANO_CAUSADO" || tipo === "DANO_SOFRIDO")) {
+    let existente = textosFlutuantes.find(
+      (tf) => tf.alvoRef === alvoRef && tf.tipo === tipo && tf.tempoAcumulo > 0
+    );
+    if (existente) {
+      existente.valorNumerico += valor;
+      existente.valor = "" + existente.valorNumerico;
+      existente.tempoAcumulo = 30; // Janela de 0,5 segundo (30 frames)
+      existente.vida = existente.vidaMax;
+      existente.x = alvoRef.x;
+      existente.y = alvoRef.y - offsetY;
+      if (ehCritico && tipo === "DANO_CAUSADO") {
+        existente.ehCritico = true;
+        existente.cor = color(255, 115, 0);
+      }
+      return;
+    }
+  }
+
+  let corFinal = cor;
+  if (tipo === "DANO_SOFRIDO") {
+    corFinal = color(255, 50, 50); // Vermelho (dano levado)
+  } else if (tipo === "CURA") {
+    corFinal = color(65, 255, 95); // Verde (cura)
+  } else if (tipo === "DANO_CAUSADO") {
+    corFinal = ehCritico ? color(255, 115, 0) : color(255, 255, 255); // Laranja tenso no crítico, branco no normal
+  }
+
   textosFlutuantes.push({
     x: x,
     y: y,
-    valor: valor,
-    cor: ehCritico ? color(255, 130, 15) : cor,
-    ehCritico: ehCritico,
-    vida: ehCritico ? 38 : 34,
-    vidaMax: ehCritico ? 38 : 34
+    valor: ehNumero ? "" + valor : valor,
+    valorNumerico: ehNumero ? valor : 0,
+    cor: corFinal,
+    ehCritico: tipo === "DANO_CAUSADO" ? ehCritico : false,
+    tipo: tipo,
+    alvoRef: alvoRef,
+    tempoAcumulo: ehNumero ? 30 : 0,
+    vida: ehCritico ? 42 : 38,
+    vidaMax: ehCritico ? 42 : 38
   });
 }
 
@@ -3977,12 +4017,21 @@ function desenharJogo() {
   textStyle(BOLD);
   for (let tf of textosFlutuantes) {
     let progresso = 1 - tf.vida / tf.vidaMax;
-    let tamBase = tf.ehCritico ? 24 : 19;
+    let tamBase = 19;
+
+    if (tf.ehCritico) {
+      tamBase = 25; // Crítico mantém tamanho fixo
+    } else if (tf.tipo === "DANO_CAUSADO" || tf.tipo === "DANO_SOFRIDO") {
+      tamBase = constrain(map(tf.valorNumerico, 200, 1500, 17, 31), 16, 32);
+    } else if (tf.tipo === "CURA") {
+      tamBase = 19;
+    }
+
     let escalaPop = progresso < 0.2 ? map(progresso, 0, 0.2, 1.25, 1.0) : 1.0;
     textSize(tamBase * escalaPop);
 
-    stroke(15, 15, 20, 230);
-    strokeWeight(tf.ehCritico ? 4.5 : 3.5);
+    stroke(15, 15, 20, 240);
+    strokeWeight(tf.ehCritico || tamBase >= 24 ? 4.5 : 3.5);
     fill(tf.cor);
     text(tf.valor, tf.x, tf.y);
   }
@@ -5180,8 +5229,19 @@ class Brawler {
       this.ganharFuria(2);
     }
 
-    criarTextoDano(this.x, this.y - 58, "-" + qtd, corTexto, ehCritico);
-  }
+    if (this.ehJogador) {
+      criarTextoDano(this.x, this.y - 58, qtd, color(255, 50, 50), false, {
+        tipo: "DANO_SOFRIDO",
+        alvoRef: this,
+        offsetY: 58
+      });
+    } else if (atacante && atacante.ehJogador) {
+      criarTextoDano(this.x, this.y - 58, qtd, color(255, 255, 255), ehCritico, {
+        tipo: "DANO_CAUSADO",
+        alvoRef: this,
+        offsetY: 58
+      });
+    }
 
   moverJogador() {
     let dx = 0;
@@ -5337,10 +5397,14 @@ class Brawler {
             let curaReal = min(qtdCura, this.vidaMax - this.vida);
             if (curaReal > 0) {
               this.vida += curaReal;
-              criarTextoDano(this.x, this.y - 45, "+" + curaReal, color(80, 255, 110));
+              if (this.ehJogador) {
+                criarTextoDano(this.x, this.y - 45, curaReal, color(65, 255, 95), false, {
+                  tipo: "CURA",
+                  alvoRef: this,
+                  offsetY: 45
+               });
             }
-          }
-        }
+         }
       }
     } else {
       this.tempoSemDano = 0;
@@ -6657,7 +6721,13 @@ class RatoAsh {
     if (atacante && atacante !== this.dono) {
       atacante.danoCausado = (atacante.danoCausado || 0) + min(qtd, max(0, this.vida + qtd));
     }
-    criarTextoDano(this.x, this.y - 26, "-" + qtd, color(255, 230, 140), false);
+    if (atacante && atacante.ehJogador) {
+      criarTextoDano(this.x, this.y - 26, qtd, color(255, 255, 255), false, {
+        tipo: "DANO_CAUSADO",
+        alvoRef: this,
+        offsetY: 26
+      });
+    }
     if (this.vida <= 0) {
       this.explodir(false);
     }
