@@ -424,225 +424,7 @@ function draw() {
   } else if (estadoJogo === "SELECAO_MODO") {
     acumuladorTempo = 0;
     desenharTelaModos();
-    // ==========================================
-// TELA DO MAP MAKER (EDITOR DE MAPAS)
-// ==========================================
-function abrirMapMaker() {
-  carregarMapaCustom();
-  ferramentaEditor = "PAREDE";
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
-  camEditorX = constrain(mapaCustom.spawnX - width / 2, 0, larg - width);
-  camEditorY = constrain(mapaCustom.spawnY - height / 2, 0, alt - height);
-  estadoJogo = "MAP_MAKER";
-}
-
-function aplicarFerramentaNoMapa(telaX, telaY) {
-  if (telaY <= 54 || telaY >= height - 68) return;
-
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
-  let mundoX = telaX + camEditorX;
-  let mundoY = telaY + camEditorY;
-
-  let gx = floor(mundoX / GRADE_EDITOR) * GRADE_EDITOR;
-  let gy = floor(mundoY / GRADE_EDITOR) * GRADE_EDITOR;
-
-  if (gx < 50 || gx > larg - 100 || gy < 50 || gy > alt - 100) return;
-
-  // Protege as áreas dos gols no Fute-Brawl
-  if (mapaCustom.modoBase === "FUTEBRAWL") {
-    let meioY = alt / 2;
-    if ((gx < 150 || gx > larg - 200) && gy > meioY - 150 && gy < meioY + 150) {
-      return;
-    }
-  }
-
-  if (ferramentaEditor === "PAREDE") {
-    let jaExiste = mapaCustom.obstaculos.some((o) => o.x === gx && o.y === gy);
-    let emCimaDoSpawn = dist(gx + 25, gy + 25, mapaCustom.spawnX, mapaCustom.spawnY) < 42;
-    if (!jaExiste && !emCimaDoSpawn) {
-      mapaCustom.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
-    }
-  } else if (ferramentaEditor === "APAGAR") {
-    for (let i = mapaCustom.obstaculos.length - 1; i >= 0; i--) {
-      let o = mapaCustom.obstaculos[i];
-      if (mundoX >= o.x && mundoX <= o.x + o.w && mundoY >= o.y && mundoY <= o.y + o.h) {
-        mapaCustom.obstaculos.splice(i, 1);
-      }
-    }
-  } else if (ferramentaEditor === "SPAWN") {
-    let colideParede = mapaCustom.obstaculos.some(
-      (o) => gx + 25 > o.x && gx + 25 < o.x + o.w && gy + 25 > o.y && gy + 25 < o.y + o.h
-    );
-    if (!colideParede) {
-      mapaCustom.spawnX = gx + 25;
-      mapaCustom.spawnY = gy + 25;
-    }
-  }
-}
-
-function desenharMapMaker() {
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
-
-  // Movimento da câmera pelo teclado (WASD / Setas)
-  let velCam = 10;
-  if (teclasPressionadas["a"] || teclasPressionadas["ArrowLeft"]) camEditorX -= velCam;
-  if (teclasPressionadas["d"] || teclasPressionadas["ArrowRight"]) camEditorX += velCam;
-  if (teclasPressionadas["w"] || teclasPressionadas["ArrowUp"]) camEditorY -= velCam;
-  if (teclasPressionadas["s"] || teclasPressionadas["ArrowDown"]) camEditorY += velCam;
-
-  camEditorX = constrain(camEditorX, 0, max(0, larg - width));
-  camEditorY = constrain(camEditorY, 0, max(0, alt - height));
-
-  background(34, 130, 56);
-
-  push();
-  translate(-camEditorX, -camEditorY);
-
-  // Grade do editor
-  stroke(255, 255, 255, 38);
-  strokeWeight(1);
-  for (let x = 0; x <= larg; x += GRADE_EDITOR) {
-    line(x, 0, x, alt);
-  }
-  for (let y = 0; y <= alt; y += GRADE_EDITOR) {
-    line(0, y, larg, y);
-  }
-
-  // Limite da arena
-  noFill();
-  stroke(255, 220, 60, 180);
-  strokeWeight(4);
-  rect(25, 50, larg - 50, alt - 75);
-
-  // Marcações de gol se for Fute-Brawl
-  if (mapaCustom.modoBase === "FUTEBRAWL") {
-    let meioY = alt / 2;
-    fill(0, 160, 255, 130);
-    stroke(150, 230, 255);
-    rect(0, meioY - 105, 25, 210, 4);
-
-    fill(255, 60, 60, 130);
-    stroke(255, 180, 180);
-    rect(larg - 25, meioY - 105, 25, 210, 4);
-  }
-
-  // Blocos colocados no mapa
-  for (let o of mapaCustom.obstaculos) {
-    noStroke();
-    fill(0, 0, 0, 75);
-    rect(o.x + 5, o.y + 6, o.w, o.h, 8);
-
-    fill(185, 115, 55);
-    stroke(105, 60, 25);
-    strokeWeight(2.5);
-    rect(o.x, o.y, o.w, o.h, 6);
-
-    noStroke();
-    fill(210, 140, 75);
-    rect(o.x + 5, o.y + 5, o.w - 10, o.h - 10, 4);
-  }
-
-  // Marcador de Spawn do Jogador
-  fill(0, 255, 120, 90);
-  stroke(0, 255, 120);
-  strokeWeight(3);
-  ellipse(mapaCustom.spawnX, mapaCustom.spawnY, 44, 44);
-  noStroke();
-  fill(255);
-  textStyle(BOLD);
-  textSize(10);
-  text("VOCÊ", mapaCustom.spawnX, mapaCustom.spawnY);
-
-  // Pré-visualização do bloco sob o mouse (PC)
-  if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA") {
-    let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
-    let gy = floor((mouseY + camEditorY) / GRADE_EDITOR) * GRADE_EDITOR;
-    noFill();
-    stroke(ferramentaEditor === "APAGAR" ? color(255, 70, 70) : color(255, 235, 80));
-    strokeWeight(2.5);
-    rect(gx, gy, GRADE_EDITOR, GRADE_EDITOR, 6);
-  }
-
-  pop();
-
-  // BARRA SUPERIOR DO EDITOR
-  noStroke();
-  fill(15, 28, 58, 245);
-  rect(0, 0, width, 54);
-
-  // Botão Voltar (Salva e volta ao Menu)
-  fill(48, 72, 122);
-  stroke(20);
-  strokeWeight(2);
-  rect(14, 9, 86, 36, 8);
-  noStroke();
-  fill(255);
-  textSize(13);
-  text("SALVAR", 57, 27);
-
-  fill(255, 215, 0);
-  textSize(18);
-  text("MAP MAKER (" + mapaCustom.obstaculos.length + ")", width / 2 - 45, 27);
-
-  // Botão alternar Modo Base (Combate / Fute-Brawl)
-  fill(mapaCustom.modoBase === "COMBATE" ? color(120, 70, 45) : color(38, 95, 165));
-  stroke(255, 215, 0);
-  strokeWeight(2);
-  rect(width - 215, 9, 200, 36, 8);
-  noStroke();
-  fill(255);
-  textSize(12);
-  text("BASE: " + mapaCustom.modoBase, width - 115, 27);
-
-  // BARRA INFERIOR DE FERRAMENTAS
-  fill(15, 28, 58, 245);
-  rect(0, height - 68, width, 68);
-
-  let ferramentas = [
-    { id: "PAREDE", label: "PAREDE", x: 16, w: 105 },
-    { id: "APAGAR", label: "APAGAR", x: 130, w: 105 },
-    { id: "SPAWN", label: "SPAWN", x: 244, w: 105 },
-    { id: "CAMERA", label: "CÂMERA", x: 358, w: 105 }
-  ];
-
-  for (let f of ferramentas) {
-    let ativo = ferramentaEditor === f.id;
-    stroke(ativo ? color(0, 255, 130) : color(30));
-    strokeWeight(2.5);
-    fill(ativo ? color(55, 115, 195) : color(38, 52, 82));
-    rect(f.x, height - 56, f.w, 44, 10);
-    noStroke();
-    fill(255);
-    textSize(12);
-    text(f.label, f.x + f.w / 2, height - 34);
-  }
-
-  // Botão Limpar Tudo
-  stroke(25);
-  strokeWeight(2.5);
-  fill(195, 50, 60);
-  rect(520, height - 56, 115, 44, 10);
-  noStroke();
-  fill(255);
-  textSize(12);
-  text("LIMPAR", 577, height - 34);
-
-  // Botão Jogar Mapa
-  stroke(25);
-  strokeWeight(2.5);
-  fill(255, 205, 15);
-  rect(650, height - 56, 184, 44, 10);
-  noStroke();
-  fill(25);
-  textSize(16);
-  text("JOGAR MAPA", 742, height - 34);
-}
-    } else if (estadoJogo === "MAP_MAKER") {
-    acumuladorTempo = 0;
-    desenharMapMaker();
+    
   } else if (estadoJogo === "INTRO_FUTEBRAWL") {
     acumuladorTempo += dt;
     let passos = 0;
@@ -709,7 +491,14 @@ function desenharTelaNickname() {
 // ==========================================
 // LOBBY PRINCIPAL (ESTILO BRAWL STARS)
 // ==========================================
-function desenharMenu() {
+function desenharMenu() {  
+  fill(25);
+  textSize(28);
+  text("JOGAR", jogarX + jogarW / 2 + 2, jogarY + jogarH / 2 + 2);
+  fill(255);
+  text("JOGAR", jogarX + jogarW / 2, jogarY + jogarH / 2);
+
+  function desenharTelaSelecaoBrawler() {
   background(22, 58, 128);
   noStroke();
   fill(32, 85, 175, 160);
@@ -884,33 +673,9 @@ function desenharMenu() {
   textSize(28);
   text("JOGAR", jogarX + jogarW / 2 + 2, jogarY + jogarH / 2 + 2);
   fill(255);
-  text("JOGAR", jogarX + jogarW / 2, jogarY + jogarH / 2);
-}
+    text("JOGAR", jogarX + jogarW / 2, jogarY + jogarH / 2);
 
-function desenharBrawlerPorTipo(tipo, x, y, angulo, escala) {
-  if (tipo === "ASH") {
-    desenharSpriteAsh(x, y, angulo, escala, 0, 20);
-  } else if (tipo === "TRUNK") {
-    desenharSpriteTrunk(x, y, angulo, escala, false, 0, false, false);
-  } else if (tipo === "COLT") {
-    desenharSpriteColt(x, y, angulo, escala, 0);
-  } else if (tipo === "BARLEY") {
-    desenharSpriteBarley(x, y, angulo, escala, 0);
-  }
-}
-
-function desenharBrawler3DFrontal(tipo, x, y, escala) {
-  if (tipo === "ASH") {
-    desenharAsh3DFrontal(x, y, escala);
-  } else if (tipo === "COLT") {
-    desenharColt3DFrontal(x, y, escala);
-  } else if (tipo === "BARLEY") {
-    desenharBarley3DFrontal(x, y, escala);
-  } else if (tipo === "TRUNK") {
-    desenharTrunk3DFrontal(x, y, escala);
-  }
-}
-// Botão MAP MAKER (lado direito do Lobby)
+  // Botão MAP MAKER (lado direito do Lobby)
   let btnMX = 680;
   let btnMY = 255;
   let btnMW = 148;
@@ -939,6 +704,31 @@ function desenharBrawler3DFrontal(tipo, x, y, escala) {
   text("MAP MAKER", btnMX + 97, btnMY + 39);
   fill(255);
   text("MAP MAKER", btnMX + 96, btnMY + 37);
+}
+
+function desenharBrawlerPorTipo(tipo, x, y, angulo, escala) {
+  if (tipo === "ASH") {
+    desenharSpriteAsh(x, y, angulo, escala, 0, 20);
+  } else if (tipo === "TRUNK") {
+    desenharSpriteTrunk(x, y, angulo, escala, false, 0, false, false);
+  } else if (tipo === "COLT") {
+    desenharSpriteColt(x, y, angulo, escala, 0);
+  } else if (tipo === "BARLEY") {
+    desenharSpriteBarley(x, y, angulo, escala, 0);
+  }
+}
+
+function desenharBrawler3DFrontal(tipo, x, y, escala) {
+  if (tipo === "ASH") {
+    desenharAsh3DFrontal(x, y, escala);
+  } else if (tipo === "COLT") {
+    desenharColt3DFrontal(x, y, escala);
+  } else if (tipo === "BARLEY") {
+    desenharBarley3DFrontal(x, y, escala);
+  } else if (tipo === "TRUNK") {
+    desenharTrunk3DFrontal(x, y, escala);
+  }
+}
 
 // ==========================================
 // MODELO 3D FRONTAL DO ASH
@@ -2780,10 +2570,213 @@ function desenharTelaModos() {
   noStroke();
   fill(25);
   textSize(22);
-  text("CONFIRMAR", width / 2, 470);
+    text("CONFIRMAR", width / 2, 470);
 }
 
-  function tratarCliqueCanvas(e, toqueX, toqueY) {
+// ==========================================
+// TELA DO MAP MAKER (EDITOR DE MAPAS)
+// ==========================================
+function abrirMapMaker() {
+  carregarMapaCustom();
+  ferramentaEditor = "PAREDE";
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+  camEditorX = constrain(mapaCustom.spawnX - width / 2, 0, larg - width);
+  camEditorY = constrain(mapaCustom.spawnY - height / 2, 0, alt - height);
+  estadoJogo = "MAP_MAKER";
+}
+
+function aplicarFerramentaNoMapa(telaX, telaY) {
+  if (telaY <= 54 || telaY >= height - 68) return;
+
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+  let mundoX = telaX + camEditorX;
+  let mundoY = telaY + camEditorY;
+
+  let gx = floor(mundoX / GRADE_EDITOR) * GRADE_EDITOR;
+  let gy = floor(mundoY / GRADE_EDITOR) * GRADE_EDITOR;
+
+  if (gx < 50 || gx > larg - 100 || gy < 50 || gy > alt - 100) return;
+
+  if (mapaCustom.modoBase === "FUTEBRAWL") {
+    let meioY = alt / 2;
+    if ((gx < 150 || gx > larg - 200) && gy > meioY - 150 && gy < meioY + 150) {
+      return;
+    }
+  }
+
+  if (ferramentaEditor === "PAREDE") {
+    let jaExiste = mapaCustom.obstaculos.some((o) => o.x === gx && o.y === gy);
+    let emCimaDoSpawn = dist(gx + 25, gy + 25, mapaCustom.spawnX, mapaCustom.spawnY) < 42;
+    if (!jaExiste && !emCimaDoSpawn) {
+      mapaCustom.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
+    }
+  } else if (ferramentaEditor === "APAGAR") {
+    for (let i = mapaCustom.obstaculos.length - 1; i >= 0; i--) {
+      let o = mapaCustom.obstaculos[i];
+      if (mundoX >= o.x && mundoX <= o.x + o.w && mundoY >= o.y && mundoY <= o.y + o.h) {
+        mapaCustom.obstaculos.splice(i, 1);
+      }
+    }
+  } else if (ferramentaEditor === "SPAWN") {
+    let colideParede = mapaCustom.obstaculos.some(
+      (o) => gx + 25 > o.x && gx + 25 < o.x + o.w && gy + 25 > o.y && gy + 25 < o.y + o.h
+    );
+    if (!colideParede) {
+      mapaCustom.spawnX = gx + 25;
+      mapaCustom.spawnY = gy + 25;
+    }
+  }
+}
+
+function desenharMapMaker() {
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+
+  let velCam = 10;
+  if (teclasPressionadas["a"] || teclasPressionadas["ArrowLeft"]) camEditorX -= velCam;
+  if (teclasPressionadas["d"] || teclasPressionadas["ArrowRight"]) camEditorX += velCam;
+  if (teclasPressionadas["w"] || teclasPressionadas["ArrowUp"]) camEditorY -= velCam;
+  if (teclasPressionadas["s"] || teclasPressionadas["ArrowDown"]) camEditorY += velCam;
+
+  camEditorX = constrain(camEditorX, 0, max(0, larg - width));
+  camEditorY = constrain(camEditorY, 0, max(0, alt - height));
+
+  background(34, 130, 56);
+
+  push();
+  translate(-camEditorX, -camEditorY);
+
+  stroke(255, 255, 255, 38);
+  strokeWeight(1);
+  for (let x = 0; x <= larg; x += GRADE_EDITOR) {
+    line(x, 0, x, alt);
+  }
+  for (let y = 0; y <= alt; y += GRADE_EDITOR) {
+    line(0, y, larg, y);
+  }
+
+  noFill();
+  stroke(255, 220, 60, 180);
+  strokeWeight(4);
+  rect(25, 50, larg - 50, alt - 75);
+
+  if (mapaCustom.modoBase === "FUTEBRAWL") {
+    let meioY = alt / 2;
+    fill(0, 160, 255, 130);
+    stroke(150, 230, 255);
+    rect(0, meioY - 105, 25, 210, 4);
+
+    fill(255, 60, 60, 130);
+    stroke(255, 180, 180);
+    rect(larg - 25, meioY - 105, 25, 210, 4);
+  }
+
+  for (let o of mapaCustom.obstaculos) {
+    noStroke();
+    fill(0, 0, 0, 75);
+    rect(o.x + 5, o.y + 6, o.w, o.h, 8);
+
+    fill(185, 115, 55);
+    stroke(105, 60, 25);
+    strokeWeight(2.5);
+    rect(o.x, o.y, o.w, o.h, 6);
+
+    noStroke();
+    fill(210, 140, 75);
+    rect(o.x + 5, o.y + 5, o.w - 10, o.h - 10, 4);
+  }
+
+  fill(0, 255, 120, 90);
+  stroke(0, 255, 120);
+  strokeWeight(3);
+  ellipse(mapaCustom.spawnX, mapaCustom.spawnY, 44, 44);
+  noStroke();
+  fill(255);
+  textStyle(BOLD);
+  textSize(10);
+  text("VOCÊ", mapaCustom.spawnX, mapaCustom.spawnY);
+
+  if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA") {
+    let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
+    let gy = floor((mouseY + camEditorY) / GRADE_EDITOR) * GRADE_EDITOR;
+    noFill();
+    stroke(ferramentaEditor === "APAGAR" ? color(255, 70, 70) : color(255, 235, 80));
+    strokeWeight(2.5);
+    rect(gx, gy, GRADE_EDITOR, GRADE_EDITOR, 6);
+  }
+
+  pop();
+
+  noStroke();
+  fill(15, 28, 58, 245);
+  rect(0, 0, width, 54);
+
+  fill(48, 72, 122);
+  stroke(20);
+  strokeWeight(2);
+  rect(14, 9, 86, 36, 8);
+  noStroke();
+  fill(255);
+  textSize(13);
+  text("SALVAR", 57, 27);
+
+  fill(255, 215, 0);
+  textSize(18);
+  text("MAP MAKER (" + mapaCustom.obstaculos.length + ")", width / 2 - 45, 27);
+
+  fill(mapaCustom.modoBase === "COMBATE" ? color(120, 70, 45) : color(38, 95, 165));
+  stroke(255, 215, 0);
+  strokeWeight(2);
+  rect(width - 215, 9, 200, 36, 8);
+  noStroke();
+  fill(255);
+  textSize(12);
+  text("BASE: " + mapaCustom.modoBase, width - 115, 27);
+
+  fill(15, 28, 58, 245);
+  rect(0, height - 68, width, 68);
+
+  let ferramentas = [
+    { id: "PAREDE", label: "PAREDE", x: 16, w: 105 },
+    { id: "APAGAR", label: "APAGAR", x: 130, w: 105 },
+    { id: "SPAWN", label: "SPAWN", x: 244, w: 105 },
+    { id: "CAMERA", label: "CÂMERA", x: 358, w: 105 }
+  ];
+
+  for (let f of ferramentas) {
+    let ativo = ferramentaEditor === f.id;
+    stroke(ativo ? color(0, 255, 130) : color(30));
+    strokeWeight(2.5);
+    fill(ativo ? color(55, 115, 195) : color(38, 52, 82));
+    rect(f.x, height - 56, f.w, 44, 10);
+    noStroke();
+    fill(255);
+    textSize(12);
+    text(f.label, f.x + f.w / 2, height - 34);
+  }
+
+  stroke(25);
+  strokeWeight(2.5);
+  fill(195, 50, 60);
+  rect(520, height - 56, 115, 44, 10);
+  noStroke();
+  fill(255);
+  textSize(12);
+  text("LIMPAR", 577, height - 34);
+
+  stroke(25);
+  strokeWeight(2.5);
+  fill(255, 205, 15);
+  rect(650, height - 56, 184, 44, 10);
+  noStroke();
+  fill(25);
+  textSize(16);
+  text("JOGAR MAPA", 742, height - 34);
+}
+
+function tratarCliqueCanvas(e, toqueX, toqueY) {
   window.focus();
   if (toqueX === undefined) {
     ehMobile = false;
@@ -2796,9 +2789,9 @@ function desenharTelaModos() {
     return;
   } else if (estadoJogo === "MENU") {
     if (cx > 680 && cx < 828 && cy > 255 && cy < 329) {
-   abrirMapMaker();
-   return;
- }
+      abrirMapMaker();
+      return;
+    }
     if (ehBotaoDireito) return;
     if (cx >= 14 && cx <= 214 && cy >= 8 && cy <= 46) {
       mostrarFormularioNickname(true);
@@ -2858,25 +2851,69 @@ function desenharTelaModos() {
       return;
     }
   } else if (estadoJogo === "SELECAO_MODO") {
-if (ehBotaoDireito) return;
-if (cy > 145 && cy < 375) {
-if (cx > 45 && cx < 285) {
-modoSelecionado = "COMBATE";
-usandoMapaCustom = false;
-}
-if (cx > 305 && cx < 545) {
-modoSelecionado = "FUTEBRAWL";
-usandoMapaCustom = false;
-}
-if (cx > 565 && cx < 805) {
-carregarMapaCustom();
-modoSelecionado = mapaCustom.modoBase;
-usandoMapaCustom = true;
-}
-}
-if (cx > width / 2 - 110 && cx < width / 2 + 110 && cy > 440 && cy < 500) {
-estadoJogo = "MENU";
-}
+    if (ehBotaoDireito) return;
+    if (cy > 145 && cy < 375) {
+      if (cx > 45 && cx < 285) {
+        modoSelecionado = "COMBATE";
+        usandoMapaCustom = false;
+      }
+      if (cx > 305 && cx < 545) {
+        modoSelecionado = "FUTEBRAWL";
+        usandoMapaCustom = false;
+      }
+      if (cx > 565 && cx < 805) {
+        carregarMapaCustom();
+        modoSelecionado = mapaCustom.modoBase;
+        usandoMapaCustom = true;
+      }
+    }
+    if (cx > width / 2 - 110 && cx < width / 2 + 110 && cy > 440 && cy < 500) {
+      estadoJogo = "MENU";
+    }
+  } else if (estadoJogo === "MAP_MAKER") {
+    if (cy <= 54) {
+      if (cx >= 14 && cx <= 100 && cy >= 9 && cy <= 45) {
+        salvarMapaCustom();
+        estadoJogo = "MENU";
+        return;
+      }
+      if (cx >= width - 215 && cx <= width - 15 && cy >= 9 && cy <= 45) {
+        mapaCustom.modoBase = mapaCustom.modoBase === "COMBATE" ? "FUTEBRAWL" : "COMBATE";
+        mapaCustom.spawnX = 400;
+        mapaCustom.spawnY = 400;
+        camEditorX = 0;
+        camEditorY = 0;
+        salvarMapaCustom();
+        return;
+      }
+      return;
+    }
+
+    if (cy >= height - 68) {
+      if (cx >= 16 && cx <= 121) ferramentaEditor = "PAREDE";
+      else if (cx >= 130 && cx <= 235) ferramentaEditor = "APAGAR";
+      else if (cx >= 244 && cx <= 349) ferramentaEditor = "SPAWN";
+      else if (cx >= 358 && cx <= 463) ferramentaEditor = "CAMERA";
+      else if (cx >= 520 && cx <= 635) {
+        mapaCustom.obstaculos = [];
+        salvarMapaCustom();
+      } else if (cx >= 650 && cx <= 834) {
+        salvarMapaCustom();
+        modoSelecionado = mapaCustom.modoBase;
+        usandoMapaCustom = true;
+        iniciarPartida();
+      }
+      return;
+    }
+
+    if (ehBotaoDireito || ferramentaEditor === "CAMERA") {
+      arrastandoCameraEditor = true;
+      ultimoArrastoX = cx;
+      ultimoArrastoY = cy;
+    } else {
+      aplicarFerramentaNoMapa(cx, cy);
+      salvarMapaCustom();
+    }
   } else if (estadoJogo === "JOGANDO") {
     if (ehMobile || touches.length > 0) return;
     if (!celebracaoGol.ativo && jogador && jogador.vida > 0) {
@@ -2892,8 +2929,25 @@ estadoJogo = "MENU";
     }
   }
 }
-function mouseDragged() 
-function mouseReleased()
+
+function mouseDragged() {
+  if (estadoJogo !== "MAP_MAKER") return;
+  if (arrastandoCameraEditor) {
+    camEditorX -= mouseX - ultimoArrastoX;
+    camEditorY -= mouseY - ultimoArrastoY;
+    ultimoArrastoX = mouseX;
+    ultimoArrastoY = mouseY;
+  } else {
+    aplicarFerramentaNoMapa(mouseX, mouseY);
+  }
+}
+
+function mouseReleased() {
+  if (estadoJogo === "MAP_MAKER") {
+    arrastandoCameraEditor = false;
+    salvarMapaCustom();
+  }
+}
 
 // ==========================================
 // CONTROLE DE ESTATÍSTICAS E FIM DE PARTIDA
@@ -3007,7 +3061,11 @@ function iniciarPartida() {
     ];
 
     let spawnsEmbaralhados = shuffle(pontosSpawn);
-    jogador = new Brawler(spawnsEmbaralhados[0].x, spawnsEmbaralhados[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
+        jogador = new Brawler(spawnsEmbaralhados[0].x, spawnsEmbaralhados[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
+    if (usandoMapaCustom) {
+      jogador.x = mapaCustom.spawnX;
+      jogador.y = mapaCustom.spawnY;
+    }
     registrarParticipantePartida(jogador);
 
     let poolBots = ["ASH", "TRUNK", "COLT", "BARLEY", "ASH", "TRUNK", "COLT", "BARLEY", "COLT"];
@@ -3019,25 +3077,31 @@ function iniciarPartida() {
       registrarParticipantePartida(bot);
     }
 
-    obstaculos.push(new Obstaculo(430, 420, 90, 90));
-    obstaculos.push(new Obstaculo(1680, 420, 90, 90));
-    obstaculos.push(new Obstaculo(430, 1690, 90, 90));
-    obstaculos.push(new Obstaculo(1680, 1690, 90, 90));
+    if (usandoMapaCustom) {
+      for (let o of mapaCustom.obstaculos) {
+        obstaculos.push(new Obstaculo(o.x, o.y, o.w, o.h));
+      }
+    } else {
+      obstaculos.push(new Obstaculo(430, 420, 90, 90));
+      obstaculos.push(new Obstaculo(1680, 420, 90, 90));
+      obstaculos.push(new Obstaculo(430, 1690, 90, 90));
+      obstaculos.push(new Obstaculo(1680, 1690, 90, 90));
 
-    obstaculos.push(new Obstaculo(1055, 340, 90, 65));
-    obstaculos.push(new Obstaculo(1055, 1795, 90, 65));
-    obstaculos.push(new Obstaculo(340, 1055, 65, 90));
-    obstaculos.push(new Obstaculo(1795, 1055, 65, 90));
+      obstaculos.push(new Obstaculo(1055, 340, 90, 65));
+      obstaculos.push(new Obstaculo(1055, 1795, 90, 65));
+      obstaculos.push(new Obstaculo(340, 1055, 65, 90));
+      obstaculos.push(new Obstaculo(1795, 1055, 65, 90));
 
-    obstaculos.push(new Obstaculo(730, 720, 85, 85));
-    obstaculos.push(new Obstaculo(1385, 720, 85, 85));
-    obstaculos.push(new Obstaculo(730, 1395, 85, 85));
-    obstaculos.push(new Obstaculo(1385, 1395, 85, 85));
+      obstaculos.push(new Obstaculo(730, 720, 85, 85));
+      obstaculos.push(new Obstaculo(1385, 720, 85, 85));
+      obstaculos.push(new Obstaculo(730, 1395, 85, 85));
+      obstaculos.push(new Obstaculo(1385, 1395, 85, 85));
 
-    obstaculos.push(new Obstaculo(1060, 860, 80, 50));
-    obstaculos.push(new Obstaculo(1060, 1290, 80, 50));
-    obstaculos.push(new Obstaculo(860, 1060, 50, 80));
-    obstaculos.push(new Obstaculo(1290, 1060, 50, 80));
+      obstaculos.push(new Obstaculo(1060, 860, 80, 50));
+      obstaculos.push(new Obstaculo(1060, 1290, 80, 50));
+      obstaculos.push(new Obstaculo(860, 1060, 50, 80));
+      obstaculos.push(new Obstaculo(1290, 1060, 50, 80));
+    }
 
     camX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
     camY = constrain(jogador.y - height / 2, 0, mundoAltura - height);
@@ -3095,9 +3159,7 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
     let embaralhadoVermelho = shuffle(todosTipos);
 
     jogador = new Brawler(430, meioY, personagemSelecionado, "AZUL", true, nicknameJogador);
-    if (usandoMapaCustom)
-      obstaculos.push(...)
-    
+
       let aliado1 = new Brawler(300, 180, embaralhadoAzul[0], "AZUL", false);
     aliado1.zonaPreferidaY = 170;
 
