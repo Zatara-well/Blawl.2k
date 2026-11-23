@@ -155,7 +155,7 @@ const DADOS_BRAWLERS = [
     raridade: "RARO",
     corFaixa: [50, 205, 50],
     saude: "2600",
-    ataque: "560",
+    ataque: "400",
     superNome: "SAIDEIRA",
     descCurta: "Garrafas por cima das paredes",
     bio: "Um barman-robô projetado para preparar bebidas e entreter clientes, Barley faz questão de deixar o bar sempre brilhando. Se precisar, ele usa os baderneiros como pano de chão."
@@ -5068,7 +5068,7 @@ class Brawler {
     } else if (this.tipo === "TRUNK") {
       this.vidaMax = 5000;
       this.velocidade = 2.5;
-      this.danoBase = 650;
+      this.danoBase = 700;
     } else if (this.tipo === "COLT") {
       this.vidaMax = 2800;
       this.velocidade = 2.7;
@@ -5076,7 +5076,7 @@ class Brawler {
     } else if (this.tipo === "BARLEY") {
       this.vidaMax = 2600;
       this.velocidade = 2.35;
-      this.danoBase = 560;
+      this.danoBase = 400;
     }
     this.vida = this.vidaMax;
   }
