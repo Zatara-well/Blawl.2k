@@ -418,6 +418,9 @@ function draw() {
   } else if (estadoJogo === "SELECAO_BRAWLER") {
     acumuladorTempo = 0;
     desenharTelaBrawlers();
+    } else if (estadoJogo === "MAP_MAKER") {
+    acumuladorTempo = 0;
+    desenharMapMaker();
   } else if (estadoJogo === "DETALHES_BRAWLER") {
     acumuladorTempo = 0;
     desenharTelaDetalhesBrawler();
@@ -492,13 +495,6 @@ function desenharTelaNickname() {
 // LOBBY PRINCIPAL (ESTILO BRAWL STARS)
 // ==========================================
 function desenharMenu() {  
-  fill(25);
-  textSize(28);
-  text("JOGAR", jogarX + jogarW / 2 + 2, jogarY + jogarH / 2 + 2);
-  fill(255);
-  text("JOGAR", jogarX + jogarW / 2, jogarY + jogarH / 2);
-
-  function desenharTelaSelecaoBrawler() {
   background(22, 58, 128);
   noStroke();
   fill(32, 85, 175, 160);
