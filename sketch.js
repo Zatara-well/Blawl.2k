@@ -7329,7 +7329,8 @@ function registrarEventosTouchCanvas() {
       salvarMapaCustom();
     }
     for (let i = 0; i < e.changedTouches.length; i++) {
-
+      let t = e.changedTouches[i];
+      
       if (joyEsq.ativo && t.identifier === joyEsq.id) {
         joyEsq.ativo = false;
         joyEsq.id = -1;
