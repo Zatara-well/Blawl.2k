@@ -20,6 +20,50 @@ let inputNickname = null;
 let btnConfirmarNome = null;
 const CHAVE_STORAGE_NICKNAME = "brawl_stars_2d_nickname_v1";
 
+// ==========================================
+// SISTEMA DE MAP MAKER (CRIADOR DE MAPAS)
+// ==========================================
+const CHAVE_STORAGE_MAPA_CUSTOM = "brawl_stars_2d_mapa_custom_v1";
+const GRADE_EDITOR = 50;
+let usandoMapaCustom = false;
+let ferramentaEditor = "PAREDE"; // "PAREDE", "APAGAR", "SPAWN", "CAMERA"
+let camEditorX = 0;
+let camEditorY = 0;
+let arrastandoCameraEditor = false;
+let ultimoArrastoX = 0;
+let ultimoArrastoY = 0;
+
+let mapaCustom = {
+  modoBase: "COMBATE", // "COMBATE" ou "FUTEBRAWL"
+  spawnX: 400,
+  spawnY: 400,
+  obstaculos: [
+    { x: 300, y: 300, w: 50, h: 50 },
+    { x: 500, y: 300, w: 50, h: 50 }
+  ]
+};
+
+function carregarMapaCustom() {
+  try {
+    let salvo = window.localStorage.getItem(CHAVE_STORAGE_MAPA_CUSTOM);
+    if (salvo) {
+      let dados = JSON.parse(salvo);
+      if (dados && Array.isArray(dados.obstaculos)) {
+        mapaCustom.modoBase = dados.modoBase === "FUTEBRAWL" ? "FUTEBRAWL" : "COMBATE";
+        mapaCustom.spawnX = typeof dados.spawnX === "number" ? dados.spawnX : 400;
+        mapaCustom.spawnY = typeof dados.spawnY === "number" ? dados.spawnY : 400;
+        mapaCustom.obstaculos = dados.obstaculos;
+      }
+    }
+  } catch (e) {}
+}
+
+function salvarMapaCustom() {
+  try {
+    window.localStorage.setItem(CHAVE_STORAGE_MAPA_CUSTOM, JSON.stringify(mapaCustom));
+  } catch (e) {}
+}
+
 let mundoLargura = 2200;
 let mundoAltura = 2200;
 let camX = 0;
@@ -293,6 +337,7 @@ function setup() {
   textAlign(CENTER, CENTER);
 
   criarElementosInputNickname();
+  carregarMapaCustom();
 
   let nomeSalvo = carregarNicknameSalvo();
   if (nomeSalvo !== "") {
@@ -379,6 +424,225 @@ function draw() {
   } else if (estadoJogo === "SELECAO_MODO") {
     acumuladorTempo = 0;
     desenharTelaModos();
+    // ==========================================
+// TELA DO MAP MAKER (EDITOR DE MAPAS)
+// ==========================================
+function abrirMapMaker() {
+  carregarMapaCustom();
+  ferramentaEditor = "PAREDE";
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+  camEditorX = constrain(mapaCustom.spawnX - width / 2, 0, larg - width);
+  camEditorY = constrain(mapaCustom.spawnY - height / 2, 0, alt - height);
+  estadoJogo = "MAP_MAKER";
+}
+
+function aplicarFerramentaNoMapa(telaX, telaY) {
+  if (telaY <= 54 || telaY >= height - 68) return;
+
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+  let mundoX = telaX + camEditorX;
+  let mundoY = telaY + camEditorY;
+
+  let gx = floor(mundoX / GRADE_EDITOR) * GRADE_EDITOR;
+  let gy = floor(mundoY / GRADE_EDITOR) * GRADE_EDITOR;
+
+  if (gx < 50 || gx > larg - 100 || gy < 50 || gy > alt - 100) return;
+
+  // Protege as áreas dos gols no Fute-Brawl
+  if (mapaCustom.modoBase === "FUTEBRAWL") {
+    let meioY = alt / 2;
+    if ((gx < 150 || gx > larg - 200) && gy > meioY - 150 && gy < meioY + 150) {
+      return;
+    }
+  }
+
+  if (ferramentaEditor === "PAREDE") {
+    let jaExiste = mapaCustom.obstaculos.some((o) => o.x === gx && o.y === gy);
+    let emCimaDoSpawn = dist(gx + 25, gy + 25, mapaCustom.spawnX, mapaCustom.spawnY) < 42;
+    if (!jaExiste && !emCimaDoSpawn) {
+      mapaCustom.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
+    }
+  } else if (ferramentaEditor === "APAGAR") {
+    for (let i = mapaCustom.obstaculos.length - 1; i >= 0; i--) {
+      let o = mapaCustom.obstaculos[i];
+      if (mundoX >= o.x && mundoX <= o.x + o.w && mundoY >= o.y && mundoY <= o.y + o.h) {
+        mapaCustom.obstaculos.splice(i, 1);
+      }
+    }
+  } else if (ferramentaEditor === "SPAWN") {
+    let colideParede = mapaCustom.obstaculos.some(
+      (o) => gx + 25 > o.x && gx + 25 < o.x + o.w && gy + 25 > o.y && gy + 25 < o.y + o.h
+    );
+    if (!colideParede) {
+      mapaCustom.spawnX = gx + 25;
+      mapaCustom.spawnY = gy + 25;
+    }
+  }
+}
+
+function desenharMapMaker() {
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+
+  // Movimento da câmera pelo teclado (WASD / Setas)
+  let velCam = 10;
+  if (teclasPressionadas["a"] || teclasPressionadas["ArrowLeft"]) camEditorX -= velCam;
+  if (teclasPressionadas["d"] || teclasPressionadas["ArrowRight"]) camEditorX += velCam;
+  if (teclasPressionadas["w"] || teclasPressionadas["ArrowUp"]) camEditorY -= velCam;
+  if (teclasPressionadas["s"] || teclasPressionadas["ArrowDown"]) camEditorY += velCam;
+
+  camEditorX = constrain(camEditorX, 0, max(0, larg - width));
+  camEditorY = constrain(camEditorY, 0, max(0, alt - height));
+
+  background(34, 130, 56);
+
+  push();
+  translate(-camEditorX, -camEditorY);
+
+  // Grade do editor
+  stroke(255, 255, 255, 38);
+  strokeWeight(1);
+  for (let x = 0; x <= larg; x += GRADE_EDITOR) {
+    line(x, 0, x, alt);
+  }
+  for (let y = 0; y <= alt; y += GRADE_EDITOR) {
+    line(0, y, larg, y);
+  }
+
+  // Limite da arena
+  noFill();
+  stroke(255, 220, 60, 180);
+  strokeWeight(4);
+  rect(25, 50, larg - 50, alt - 75);
+
+  // Marcações de gol se for Fute-Brawl
+  if (mapaCustom.modoBase === "FUTEBRAWL") {
+    let meioY = alt / 2;
+    fill(0, 160, 255, 130);
+    stroke(150, 230, 255);
+    rect(0, meioY - 105, 25, 210, 4);
+
+    fill(255, 60, 60, 130);
+    stroke(255, 180, 180);
+    rect(larg - 25, meioY - 105, 25, 210, 4);
+  }
+
+  // Blocos colocados no mapa
+  for (let o of mapaCustom.obstaculos) {
+    noStroke();
+    fill(0, 0, 0, 75);
+    rect(o.x + 5, o.y + 6, o.w, o.h, 8);
+
+    fill(185, 115, 55);
+    stroke(105, 60, 25);
+    strokeWeight(2.5);
+    rect(o.x, o.y, o.w, o.h, 6);
+
+    noStroke();
+    fill(210, 140, 75);
+    rect(o.x + 5, o.y + 5, o.w - 10, o.h - 10, 4);
+  }
+
+  // Marcador de Spawn do Jogador
+  fill(0, 255, 120, 90);
+  stroke(0, 255, 120);
+  strokeWeight(3);
+  ellipse(mapaCustom.spawnX, mapaCustom.spawnY, 44, 44);
+  noStroke();
+  fill(255);
+  textStyle(BOLD);
+  textSize(10);
+  text("VOCÊ", mapaCustom.spawnX, mapaCustom.spawnY);
+
+  // Pré-visualização do bloco sob o mouse (PC)
+  if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA") {
+    let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
+    let gy = floor((mouseY + camEditorY) / GRADE_EDITOR) * GRADE_EDITOR;
+    noFill();
+    stroke(ferramentaEditor === "APAGAR" ? color(255, 70, 70) : color(255, 235, 80));
+    strokeWeight(2.5);
+    rect(gx, gy, GRADE_EDITOR, GRADE_EDITOR, 6);
+  }
+
+  pop();
+
+  // BARRA SUPERIOR DO EDITOR
+  noStroke();
+  fill(15, 28, 58, 245);
+  rect(0, 0, width, 54);
+
+  // Botão Voltar (Salva e volta ao Menu)
+  fill(48, 72, 122);
+  stroke(20);
+  strokeWeight(2);
+  rect(14, 9, 86, 36, 8);
+  noStroke();
+  fill(255);
+  textSize(13);
+  text("SALVAR", 57, 27);
+
+  fill(255, 215, 0);
+  textSize(18);
+  text("MAP MAKER (" + mapaCustom.obstaculos.length + ")", width / 2 - 45, 27);
+
+  // Botão alternar Modo Base (Combate / Fute-Brawl)
+  fill(mapaCustom.modoBase === "COMBATE" ? color(120, 70, 45) : color(38, 95, 165));
+  stroke(255, 215, 0);
+  strokeWeight(2);
+  rect(width - 215, 9, 200, 36, 8);
+  noStroke();
+  fill(255);
+  textSize(12);
+  text("BASE: " + mapaCustom.modoBase, width - 115, 27);
+
+  // BARRA INFERIOR DE FERRAMENTAS
+  fill(15, 28, 58, 245);
+  rect(0, height - 68, width, 68);
+
+  let ferramentas = [
+    { id: "PAREDE", label: "PAREDE", x: 16, w: 105 },
+    { id: "APAGAR", label: "APAGAR", x: 130, w: 105 },
+    { id: "SPAWN", label: "SPAWN", x: 244, w: 105 },
+    { id: "CAMERA", label: "CÂMERA", x: 358, w: 105 }
+  ];
+
+  for (let f of ferramentas) {
+    let ativo = ferramentaEditor === f.id;
+    stroke(ativo ? color(0, 255, 130) : color(30));
+    strokeWeight(2.5);
+    fill(ativo ? color(55, 115, 195) : color(38, 52, 82));
+    rect(f.x, height - 56, f.w, 44, 10);
+    noStroke();
+    fill(255);
+    textSize(12);
+    text(f.label, f.x + f.w / 2, height - 34);
+  }
+
+  // Botão Limpar Tudo
+  stroke(25);
+  strokeWeight(2.5);
+  fill(195, 50, 60);
+  rect(520, height - 56, 115, 44, 10);
+  noStroke();
+  fill(255);
+  textSize(12);
+  text("LIMPAR", 577, height - 34);
+
+  // Botão Jogar Mapa
+  stroke(25);
+  strokeWeight(2.5);
+  fill(255, 205, 15);
+  rect(650, height - 56, 184, 44, 10);
+  noStroke();
+  fill(25);
+  textSize(16);
+  text("JOGAR MAPA", 742, height - 34);
+}
+    } else if (estadoJogo === "MAP_MAKER") {
+    acumuladorTempo = 0;
+    desenharMapMaker();
   } else if (estadoJogo === "INTRO_FUTEBRAWL") {
     acumuladorTempo += dt;
     let passos = 0;
@@ -646,6 +910,35 @@ function desenharBrawler3DFrontal(tipo, x, y, escala) {
     desenharTrunk3DFrontal(x, y, escala);
   }
 }
+// Botão MAP MAKER (lado direito do Lobby)
+  let btnMX = 680;
+  let btnMY = 255;
+  let btnMW = 148;
+  let btnMH = 74;
+
+  noStroke();
+  fill(12, 20, 40);
+  rect(btnMX, btnMY + 5, btnMW, btnMH, 10);
+
+  stroke(25);
+  strokeWeight(3);
+  fill(46, 62, 92);
+  rect(btnMX, btnMY, btnMW, btnMH, 10);
+
+  fill(85, 215, 115);
+  stroke(25);
+  strokeWeight(2);
+  rect(btnMX + 16, btnMY + 23, 26, 26, 5);
+  stroke(25);
+  line(btnMX + 29, btnMY + 23, btnMX + 29, btnMY + 49);
+  line(btnMX + 16, btnMY + 36, btnMX + 42, btnMY + 36);
+
+  noStroke();
+  fill(0, 180);
+  textSize(14);
+  text("MAP MAKER", btnMX + 97, btnMY + 39);
+  fill(255);
+  text("MAP MAKER", btnMX + 96, btnMY + 37);
 
 // ==========================================
 // MODELO 3D FRONTAL DO ASH
@@ -2408,48 +2701,75 @@ function desenharTelaModos() {
   textSize(30);
   text("ESCOLHA O EVENTO", width / 2, 65);
 
+  // Card 1: COMBATE
+  let selCombate = modoSelecionado === "COMBATE" && !usandoMapaCustom;
   strokeWeight(4);
-  stroke(modoSelecionado === "COMBATE" ? color(0, 255, 120) : color(80, 95, 130));
+  stroke(selCombate ? color(0, 255, 120) : color(80, 95, 130));
   fill(75, 48, 38);
-  rect(135, 145, 265, 230, 18);
+  rect(45, 145, 240, 230, 18);
 
   fill(65, 215, 85);
   stroke(20);
   strokeWeight(3);
-  ellipse(267, 215, 56, 52);
-  rect(253, 232, 28, 14, 4);
+  ellipse(165, 215, 56, 52);
+  rect(151, 232, 28, 14, 4);
   fill(20);
   noStroke();
-  ellipse(257, 213, 11, 13);
-  ellipse(277, 213, 11, 13);
+  ellipse(155, 213, 11, 13);
+  ellipse(175, 213, 11, 13);
 
   fill(255);
-  textSize(24);
-  text("COMBATE", 267, 285);
+  textSize(22);
+  text("COMBATE", 165, 285);
   fill(230);
-  textSize(13);
-  text("Caverna Convulsiva\n10 Brawlers • Mapa Gigante", 267, 328);
+  textSize(12);
+  text("Caverna Convulsiva\n10 Brawlers • Mapa Gigante", 165, 328);
 
+  // Card 2: FUTE-BRAWL
+  let selFute = modoSelecionado === "FUTEBRAWL" && !usandoMapaCustom;
   strokeWeight(4);
-  stroke(modoSelecionado === "FUTEBRAWL" ? color(0, 255, 120) : color(80, 95, 130));
+  stroke(selFute ? color(0, 255, 120) : color(80, 95, 130));
   fill(35, 68, 105);
-  rect(450, 145, 265, 230, 18);
+  rect(305, 145, 240, 230, 18);
 
   fill(255);
   stroke(20);
   strokeWeight(3);
-  ellipse(582, 220, 56, 56);
+  ellipse(425, 220, 56, 56);
   fill(35, 110, 130);
   noStroke();
-  ellipse(582, 220, 24, 24);
+  ellipse(425, 220, 24, 24);
 
   fill(255);
-  textSize(24);
-  text("FUTE-BRAWL", 582, 285);
+  textSize(22);
+  text("FUTE-BRAWL", 425, 285);
   fill(230);
-  textSize(13);
-  text("Tiro de meta\n3v3 • 2 Minutos (Prorrogação 1 min)", 582, 328);
+  textSize(12);
+  text("Tiro de meta\n3v3 • 2 Minutos", 425, 328);
 
+  // Card 3: MAPA CRIADO
+  strokeWeight(4);
+  stroke(usandoMapaCustom ? color(0, 255, 120) : color(80, 95, 130));
+  fill(46, 82, 54);
+  rect(565, 145, 240, 230, 18);
+
+  fill(255, 205, 35);
+  stroke(20);
+  strokeWeight(3);
+  rect(657, 192, 56, 56, 10);
+  stroke(20);
+  line(685, 192, 685, 248);
+  line(657, 220, 713, 220);
+
+  noStroke();
+  fill(255);
+  textSize(22);
+  text("MAPA CRIADO", 685, 285);
+  fill(230);
+  textSize(12);
+  text("Base: " + mapaCustom.modoBase + "\n" + mapaCustom.obstaculos.length + " blocos salvos", 685, 328);
+
+  // Botão Confirmar
   noStroke();
   fill(165, 95, 0);
   rect(width / 2 - 110, 445, 220, 60, 14);
@@ -2475,6 +2795,10 @@ function desenharTelaModos() {
   if (estadoJogo === "NOME_INICIAL") {
     return;
   } else if (estadoJogo === "MENU") {
+    if (cx > 680 && cx < 828 && cy > 255 && cy < 329) {
+   abrirMapMaker();
+   return;
+ }
     if (ehBotaoDireito) return;
     if (cx >= 14 && cx <= 214 && cy >= 8 && cy <= 46) {
       mostrarFormularioNickname(true);
@@ -2534,14 +2858,25 @@ function desenharTelaModos() {
       return;
     }
   } else if (estadoJogo === "SELECAO_MODO") {
-    if (ehBotaoDireito) return;
-    if (cy > 145 && cy < 375) {
-      if (cx > 135 && cx < 400) modoSelecionado = "COMBATE";
-      if (cx > 450 && cx < 715) modoSelecionado = "FUTEBRAWL";
-    }
-    if (cx > width / 2 - 110 && cx < width / 2 + 110 && cy > 440 && cy < 500) {
-      estadoJogo = "MENU";
-    }
+if (ehBotaoDireito) return;
+if (cy > 145 && cy < 375) {
+if (cx > 45 && cx < 285) {
+modoSelecionado = "COMBATE";
+usandoMapaCustom = false;
+}
+if (cx > 305 && cx < 545) {
+modoSelecionado = "FUTEBRAWL";
+usandoMapaCustom = false;
+}
+if (cx > 565 && cx < 805) {
+carregarMapaCustom();
+modoSelecionado = mapaCustom.modoBase;
+usandoMapaCustom = true;
+}
+}
+if (cx > width / 2 - 110 && cx < width / 2 + 110 && cy > 440 && cy < 500) {
+estadoJogo = "MENU";
+}
   } else if (estadoJogo === "JOGANDO") {
     if (ehMobile || touches.length > 0) return;
     if (!celebracaoGol.ativo && jogador && jogador.vida > 0) {
@@ -2557,6 +2892,8 @@ function desenharTelaModos() {
     }
   }
 }
+function mouseDragged() 
+function mouseReleased()
 
 // ==========================================
 // CONTROLE DE ESTATÍSTICAS E FIM DE PARTIDA
@@ -2733,16 +3070,23 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
   celebracaoGol.ativo = false;
 
   let meioY = mundoAltura / 2;
-
-  obstaculos = [
-    new Obstaculo(210, meioY - 75, 32, 150),
-    new Obstaculo(mundoLargura - 242, meioY - 75, 32, 150),
-    new Obstaculo(460, 170, 75, 50),
-    new Obstaculo(mundoLargura - 535, 170, 75, 50),
-    new Obstaculo(460, mundoAltura - 220, 75, 50),
-    new Obstaculo(mundoLargura - 535, mundoAltura - 220, 75, 50)
-  ];
-
+  
+    if (usandoMapaCustom) {
+    obstaculos = [];
+    for (let o of mapaCustom.obstaculos) {
+      obstaculos.push(new Obstaculo(o.x, o.y, o.w, o.h));
+    }
+  } else {
+    obstaculos = [
+      new Obstaculo(210, meioY - 75, 32, 150),
+      new Obstaculo(mundoLargura - 242, meioY - 75, 32, 150),
+      new Obstaculo(460, 170, 75, 50),
+      new Obstaculo(mundoLargura - 535, 170, 75, 50),
+      new Obstaculo(460, mundoAltura - 220, 75, 50),
+      new Obstaculo(mundoLargura - 535, mundoAltura - 220, 75, 50)
+    ];
+  }
+  
   if (sortearBots) {
     let poolDisponivel = DADOS_BRAWLERS.map((b) => b.id).filter((id) => id !== personagemSelecionado);
     let embaralhadoAzul = shuffle(poolDisponivel);
@@ -2751,8 +3095,10 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
     let embaralhadoVermelho = shuffle(todosTipos);
 
     jogador = new Brawler(430, meioY, personagemSelecionado, "AZUL", true, nicknameJogador);
-
-    let aliado1 = new Brawler(300, 180, embaralhadoAzul[0], "AZUL", false);
+    if (usandoMapaCustom)
+      obstaculos.push(...)
+    
+      let aliado1 = new Brawler(300, 180, embaralhadoAzul[0], "AZUL", false);
     aliado1.zonaPreferidaY = 170;
 
     let aliado2 = new Brawler(300, mundoAltura - 180, embaralhadoAzul[1], "AZUL", false);
@@ -6885,9 +7231,21 @@ function registrarEventosTouchCanvas() {
       scrollBrawlers = constrain(scrollBrawlers + delta, 0, maxScroll);
       return;
     }
-
+    if (estadoJogo === "MAP_MAKER" && e.changedTouches.length > 0) {
+      let tx = (e.changedTouches[0].clientX - rect.left) * escalaX;
+      let ty = (e.changedTouches[0].clientY - rect.top) * escalaY;
+      if (ferramentaEditor === "CAMERA") {
+        camEditorX -= tx - ultimoArrastoX;
+        camEditorY -= ty - ultimoArrastoY;
+        ultimoArrastoX = tx;
+        ultimoArrastoY = ty;
+      } else {
+        aplicarFerramentaNoMapa(tx, ty);
+      }
+      return;
+    }
     if (estadoJogo !== "JOGANDO" || celebracaoGol.ativo) return;
-
+  
     for (let i = 0; i < e.changedTouches.length; i++) {
       let t = e.changedTouches[i];
       let tx = (t.clientX - rect.left) * escalaX;
