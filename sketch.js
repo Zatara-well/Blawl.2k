@@ -5242,7 +5242,8 @@ class Brawler {
         offsetY: 58
       });
     }
-
+  }
+  
   moverJogador() {
     let dx = 0;
     let dy = 0;
@@ -5402,9 +5403,10 @@ class Brawler {
                   tipo: "CURA",
                   alvoRef: this,
                   offsetY: 45
-               });
+              });
             }
-         }
+          }
+        }
       }
     } else {
       this.tempoSemDano = 0;
