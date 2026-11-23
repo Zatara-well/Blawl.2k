@@ -5476,7 +5476,7 @@ class Brawler {
         if (this.tickEngancheTrunk <= 0) {
           for (let alvo of inimigosNoContato) {
             if (this.vida <= 0) break;
-            alvo.receberDano(260, color(255, 130, 15), true, this);
+            alvo.receberDano(260, color(255, 255, 255), false, this);
 
             for (let k = 0; k < 4; k++) {
               particulas.push({
