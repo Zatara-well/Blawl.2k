@@ -6970,7 +6970,7 @@ class GarrafaBarley {
 // ==========================================
 // POÇA ÁCIDA DO BARLEY (LIGEIRAMENTE MAIS ESCURA)
 // ==========================================
-class PocaBarley {
+  class PocaBarley {
   constructor(x, y, raio, danoTick, time, dono, ehSuper = false) {
     this.x = x;
     this.y = y;
@@ -6979,10 +6979,10 @@ class PocaBarley {
     this.time = time;
     this.dono = dono;
     this.ehSuper = ehSuper;
-    this.vidaMax = 100;
+    this.vidaMax = 120; // 2 segundos (120 frames a 60 FPS = 2 ticks de 1s)
     this.vida = this.vidaMax;
-    this.atingidosTick1 = [];
-    this.atingidosTick2 = [];
+    this.intervaloDanoFrames = 60; // 60 frames = 1 segundo exato
+    this.ultimoDanoAlvo = new Map();
 
     this.lobulos = [];
     let qtdLobulos = 7;
@@ -7023,25 +7023,23 @@ class PocaBarley {
   atualizar(todos) {
     let frameDecorrido = this.vidaMax - this.vida;
     this.vida--;
-
-    if (frameDecorrido <= 25) {
-      this.aplicarDanoNosInimigos(todos, this.atingidosTick1);
-    } else if (frameDecorrido >= 50 && frameDecorrido <= 75) {
-      this.aplicarDanoNosInimigos(todos, this.atingidosTick2);
-    }
+    this.aplicarDanoNosInimigos(todos, frameDecorrido);
   }
 
-  aplicarDanoNosInimigos(todos, listaJaAtingidos) {
+  aplicarDanoNosInimigos(todos, frameDecorrido) {
     for (let b of todos) {
-      if (b.time !== this.time && b.vida > 0 && !listaJaAtingidos.includes(b)) {
+      if (b.time !== this.time && b.vida > 0) {
         if (dist(this.x, this.y, b.x, b.y) <= this.raio + b.raio * 0.65) {
-          listaJaAtingidos.push(b);
-          b.receberDano(this.danoTick, color(215, 120, 255), false, this.dono);
+          let ultimoFrame = this.ultimoDanoAlvo.get(b);
+          if (ultimoFrame === undefined || frameDecorrido - ultimoFrame >= this.intervaloDanoFrames) {
+            this.ultimoDanoAlvo.set(b, frameDecorrido);
+            b.receberDano(this.danoTick, color(215, 120, 255), false, this.dono);
             if (this.dono && this.dono.vida > 0) {
-            if (this.ehSuper) {
-              this.dono.superCarga = min(100, this.dono.superCarga + 4.5); // Super carrega pouco
-            } else {
-              this.dono.superCarga = min(100, this.dono.superCarga + 10);  // Ataque normal (10 acertos)
+              if (this.ehSuper) {
+                this.dono.superCarga = min(100, this.dono.superCarga + 4.5); // Super carrega pouco
+              } else {
+                this.dono.superCarga = min(100, this.dono.superCarga + 10);  // Ataque normal (10 acertos)
+              }
             }
           }
         }
@@ -7049,10 +7047,13 @@ class PocaBarley {
     }
 
     for (let rt of ratosAsh) {
-      if (rt.time !== this.time && rt.vida > 0 && !listaJaAtingidos.includes(rt)) {
+      if (rt.time !== this.time && rt.vida > 0) {
         if (dist(this.x, this.y, rt.x, rt.y) <= this.raio + rt.raio * 0.65) {
-          listaJaAtingidos.push(rt);
-          rt.receberDano(this.danoTick, this.dono);
+          let ultimoFrame = this.ultimoDanoAlvo.get(rt);
+          if (ultimoFrame === undefined || frameDecorrido - ultimoFrame >= this.intervaloDanoFrames) {
+            this.ultimoDanoAlvo.set(rt, frameDecorrido);
+            rt.receberDano(this.danoTick, this.dono);
+          }
         }
       }
     }
