@@ -6373,7 +6373,7 @@ class PocaTerraTrunk {
     this.y = y;
     this.raio = raio;
     this.time = time;
-    this.vidaMax = 420; // 7 segundos
+    this.vidaMax = 600; // 10 segundos
     this.vida = this.vidaMax;
     this.graos = [];
     for (let i = 0; i < 16; i++) {
