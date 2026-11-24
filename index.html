@@ -16,22 +16,23 @@
 </head>
 <body>
   <main id="jogo-container"></main>
-  <!-- Firebase App, Auth e Firestore (versão compat) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Firebase SDK (versão compatível com o seu sketch.js) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
 <script>
   const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_PROJETO.firebaseapp.com",
-    projectId: "SEU_PROJETO",
-    storageBucket: "SEU_PROJETO.appspot.com",
-    messagingSenderId: "SEU_SENDER_ID",
-    appId: "SEU_APP_ID"
+    apiKey: "AIzaSyBt2wDDLLW7CTYlJwpOelc45KtTy65P6Bs",
+    authDomain: "brawl-2d-debc2.firebaseapp.com",
+    projectId: "brawl-2d-debc2",
+    storageBucket: "brawl-2d-debc2.firebasestorage.app",
+    messagingSenderId: "1080319453077",
+    appId: "1:1080319453077:web:30cc2875f5da698d0d389c",
+    measurementId: "G-5ZLHWJVQHR"
   };
 
-  if (typeof firebase !== "undefined" && !firebase.apps.length) {
+  if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
 </script>
