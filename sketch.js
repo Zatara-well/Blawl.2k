@@ -4134,7 +4134,8 @@ function desenharJogo() {
   for (let b of todos) {
     if (b.vida > 0) {
       if (b.time === jogador.time || inimigoReveladoNaMoita(b)) {
-      b.desenhar();
+       b.desenhar();
+     }
     } else if (modoSelecionado === "FUTEBRAWL" && b.respawnTimer > 0) {
       b.desenharRespawn();
     }
