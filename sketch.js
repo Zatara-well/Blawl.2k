@@ -3645,9 +3645,9 @@ function atualizarJogo() {
   if (jogador.respawnTimer <= 0) {
     jogador.vida = jogador.vidaMax;
     jogador.municao = 3;
-    if (usandoMapaCustom) {
-      jogador.x = mapaCustom.spawnX;
-      jogador.y = mapaCustom.spawnY;
+   if (mapasOficiais.FUTEBRAWL) {
+      jogador.x = mapasOficiais.FUTEBRAWL.spawnX;
+      jogador.y = mapasOficiais.FUTEBRAWL.spawnY;
     } else {
       jogador.x = mundoLargura / 2;
       jogador.y = mundoAltura - 185;
