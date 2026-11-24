@@ -679,6 +679,38 @@ function mouseWheel(event) {
     desenharFim();
   }
 }
+function desenharSpawnsMapMaker(modo, larguraMapa, alturaMapa) {
+  push();
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+
+  for (let i = 0; i < spawnsEditor.length; i++) {
+    let s = spawnsEditor[i];
+    if (modo === "FUTEBRAWL") {
+      let azul = ehLadoAzul(s.x, s.y, larguraMapa, alturaMapa);
+      fill(azul ? "#2196F3" : "#F44336");
+      stroke(255);
+      strokeWeight(2);
+      circle(s.x, s.y, 32);
+
+      noStroke();
+      fill(255);
+      textSize(10);
+      text(azul ? "ALIADO" : "INIMIGO", s.x, s.y + 24);
+    } else {
+      fill("#FFC107");
+      stroke(30);
+      strokeWeight(2);
+      circle(s.x, s.y, 32);
+
+      noStroke();
+      fill(20);
+      textSize(12);
+      text(i + 1, s.x, s.y);
+    }
+  }
+  pop();
+}
 
 // ==========================================
 // TELA DE NICKNAME (ANTES DO MENU)
