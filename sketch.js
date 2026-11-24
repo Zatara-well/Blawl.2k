@@ -5563,7 +5563,6 @@ class Brawler {
 
     this.dashTimer = 0;
     this.dashAngulo = 0;
-    this.alvoEnganchadoTrunk = null;
     this.tickEngancheTrunk = 0;
     this.alvosIgnoradosTrunk = [];
 
