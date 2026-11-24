@@ -3087,65 +3087,63 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
       estadoJogo = "MENU";
       return;
     }
-  } else if (estadoJogo === "SELECAO_MODO") {
+    } else if (estadoJogo === "SELECAO_MODO") {
     if (ehBotaoDireito) return;
     if (cy > 145 && cy < 375) {
-      if (cx > 45 && cx < 285) {
+      if (cx > 115 && cx < 385) {
         modoSelecionado = "COMBATE";
-        usandoMapaCustom = false;
       }
-      if (cx > 305 && cx < 545) {
+      if (cx > 465 && cx < 735) {
         modoSelecionado = "FUTEBRAWL";
-        usandoMapaCustom = false;
-      }
-      if (cx > 565 && cx < 805) {
-        carregarMapaCustom();
-        modoSelecionado = mapaCustom.modoBase;
-        usandoMapaCustom = true;
       }
     }
     if (cx > width / 2 - 110 && cx < width / 2 + 110 && cy > 440 && cy < 500) {
       estadoJogo = "MENU";
     }
-    } else if (estadoJogo === "MAP_MAKER") {
+  } else if (estadoJogo === "MAP_MAKER") {
+    if (!ehHostAutorizado) {
+      estadoJogo = "MENU";
+      return;
+    }
     if (cy <= 54) {
       arrastandoCameraEditor = false;
-      if (cx >= 14 && cx <= 100 && cy >= 9 && cy <= 45) {
-        salvarMapaCustom();
+      // VOLTAR (sai sem salvar alterações)
+      if (cx >= 12 && cx <= 94 && cy >= 9 && cy <= 45) {
         estadoJogo = "MENU";
         return;
       }
-      if (cx >= width - 215 && cx <= width - 15 && cy >= 9 && cy <= 45) {
-        mapaCustom.modoBase = mapaCustom.modoBase === "COMBATE" ? "FUTEBRAWL" : "COMBATE";
-        if (mapaCustom.modoBase === "FUTEBRAWL") {
-          mapaCustom.spawnX = 475;
-          mapaCustom.spawnY = 1250;
-        } else {
-          mapaCustom.spawnX = 400;
-          mapaCustom.spawnY = 400;
-        }
-        camEditorX = 0;
-        camEditorY = 0;
-        salvarMapaCustom();
+      // SALVAR (publica o mapa oficial do modo para todos os jogadores)
+      if (cx >= 102 && cx <= 190 && cy >= 9 && cy <= 45) {
+        salvarMapaCustom(true);
+        return;
+      }
+      // PADRÃO (restaura o mapa original do modo)
+      if (cx >= 545 && cx <= 629 && cy >= 9 && cy <= 45) {
+        restaurarMapaPadraoDoModo(editorMapa.modoBase);
+        return;
+      }
+      // Alternar modo COMBATE / FUTEBRAWL
+      if (cx >= 637 && cx <= 838 && cy >= 9 && cy <= 45) {
+        let proximoModo = editorMapa.modoBase === "COMBATE" ? "FUTEBRAWL" : "COMBATE";
+        carregarModoNoEditor(proximoModo);
         return;
       }
       return;
     }
 
     if (cy >= height - 68) {
-      if (cx >= 12 && cx <= 100) ferramentaEditor = "PAREDE";
-      else if (cx >= 106 && cx <= 194) ferramentaEditor = "MOITA";
-      else if (cx >= 200 && cx <= 288) ferramentaEditor = "APAGAR";
-      else if (cx >= 294 && cx <= 382) ferramentaEditor = "SPAWN";
-      else if (cx >= 388 && cx <= 476) ferramentaEditor = "CAMERA";
-      else if (cx >= 510 && cx <= 615) {
-        mapaCustom.obstaculos = [];
-        mapaCustom.moitas = [];
-        salvarMapaCustom();
-      } else if (cx >= 625 && cx <= 838) {
-        salvarMapaCustom();
-        modoSelecionado = mapaCustom.modoBase;
-        usandoMapaCustom = true;
+      if (cx >= 10 && cx <= 88) ferramentaEditor = "PAREDE";
+      else if (cx >= 93 && cx <= 167) ferramentaEditor = "MOITA";
+      else if (cx >= 172 && cx <= 250) ferramentaEditor = "APAGAR";
+      else if (cx >= 255 && cx <= 329) ferramentaEditor = "SPAWN";
+      else if (cx >= 334 && cx <= 412) ferramentaEditor = "CAMERA";
+      else if (cx >= 417 && cx <= 525) espelharMapa = !espelharMapa;
+      else if (cx >= 534 && cx <= 620) {
+        editorMapa.obstaculos = [];
+        editorMapa.moitas = [];
+      } else if (cx >= 628 && cx <= 840) {
+        salvarMapaCustom(true);
+        modoSelecionado = editorMapa.modoBase;
         iniciarPartida();
       }
       return;
@@ -3157,7 +3155,6 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
       ultimoArrastoY = cy;
     } else {
       aplicarFerramentaNoMapa(cx, cy);
-      salvarMapaCustom();
     }
    
   } else if (estadoJogo === "JOGANDO") {
