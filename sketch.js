@@ -2926,7 +2926,7 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
     if (cx > width / 2 - 110 && cx < width / 2 + 110 && cy > 440 && cy < 500) {
       estadoJogo = "MENU";
     }
-  } else if (estadoJogo === "MAP_MAKER") {
+    } else if (estadoJogo === "MAP_MAKER") {
     if (cy <= 54) {
       arrastandoCameraEditor = false;
       if (cx >= 14 && cx <= 100 && cy >= 9 && cy <= 45) {
@@ -2936,8 +2936,13 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
       }
       if (cx >= width - 215 && cx <= width - 15 && cy >= 9 && cy <= 45) {
         mapaCustom.modoBase = mapaCustom.modoBase === "COMBATE" ? "FUTEBRAWL" : "COMBATE";
-        mapaCustom.spawnX = 400;
-        mapaCustom.spawnY = 400;
+        if (mapaCustom.modoBase === "FUTEBRAWL") {
+          mapaCustom.spawnX = 475;
+          mapaCustom.spawnY = 1250;
+        } else {
+          mapaCustom.spawnX = 400;
+          mapaCustom.spawnY = 400;
+        }
         camEditorX = 0;
         camEditorY = 0;
         salvarMapaCustom();
@@ -2947,14 +2952,16 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
     }
 
     if (cy >= height - 68) {
-      if (cx >= 16 && cx <= 121) ferramentaEditor = "PAREDE";
-      else if (cx >= 130 && cx <= 235) ferramentaEditor = "APAGAR";
-      else if (cx >= 244 && cx <= 349) ferramentaEditor = "SPAWN";
-      else if (cx >= 358 && cx <= 463) ferramentaEditor = "CAMERA";
-      else if (cx >= 520 && cx <= 635) {
+      if (cx >= 12 && cx <= 100) ferramentaEditor = "PAREDE";
+      else if (cx >= 106 && cx <= 194) ferramentaEditor = "MOITA";
+      else if (cx >= 200 && cx <= 288) ferramentaEditor = "APAGAR";
+      else if (cx >= 294 && cx <= 382) ferramentaEditor = "SPAWN";
+      else if (cx >= 388 && cx <= 476) ferramentaEditor = "CAMERA";
+      else if (cx >= 510 && cx <= 615) {
         mapaCustom.obstaculos = [];
+        mapaCustom.moitas = [];
         salvarMapaCustom();
-      } else if (cx >= 650 && cx <= 834) {
+      } else if (cx >= 625 && cx <= 838) {
         salvarMapaCustom();
         modoSelecionado = mapaCustom.modoBase;
         usandoMapaCustom = true;
@@ -2971,6 +2978,7 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
       aplicarFerramentaNoMapa(cx, cy);
       salvarMapaCustom();
     }
+   
   } else if (estadoJogo === "JOGANDO") {
     if (ehMobile || touches.length > 0) return;
     if (!celebracaoGol.ativo && jogador && jogador.vida > 0) {
