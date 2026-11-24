@@ -3097,6 +3097,7 @@ function iniciarPartida() {
   textosFlutuantes = [];
   confetesGol = [];
   obstaculos = [];
+  moitas = [];
   inimigos = [];
   aliados = [];
   estatisticasPartida = [];
