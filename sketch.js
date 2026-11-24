@@ -51,6 +51,7 @@ let mapasOficiais = {
 };
 
 // Rascunho ativo enquanto o Host edita no Map Maker
+let spawnsEditor = [];
 let editorMapa = {
   modoBase: "COMBATE",
   spawns: [],
