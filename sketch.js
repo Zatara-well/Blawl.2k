@@ -2578,38 +2578,54 @@ function desenharTelaModos() {
 function abrirMapMaker() {
   carregarMapaCustom();
   ferramentaEditor = "PAREDE";
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
-  camEditorX = constrain(mapaCustom.spawnX - width / 2, 0, larg - width);
-  camEditorY = constrain(mapaCustom.spawnY - height / 2, 0, alt - height);
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 950;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 1550;
+  camEditorX = constrain(mapaCustom.spawnX - width / 2, 0, max(0, larg - width));
+  camEditorY = constrain(mapaCustom.spawnY - height / 2, 0, max(0, alt - height));
   estadoJogo = "MAP_MAKER";
+}
+
+function pontoValidoNoEditor(gx, gy, larg, alt) {
+  if (mapaCustom.modoBase === "COMBATE") {
+    return gx >= 50 && gx <= larg - 100 && gy >= 50 && gy <= alt - 100;
+  }
+
+  let golEsq = larg / 2 - 125;
+  let golDir = larg / 2 + 125;
+  let dentroCampoPrincipal = gx >= 50 && gx <= larg - 100 && gy >= 150 && gy <= alt - 200;
+  let dentroGolCima = gx >= golEsq && gx <= golDir - 50 && gy >= 50 && gy < 150;
+  let dentroGolBaixo = gx >= golEsq && gx <= golDir - 50 && gy > alt - 200 && gy <= alt - 100;
+
+  return dentroCampoPrincipal || dentroGolCima || dentroGolBaixo;
 }
 
 function aplicarFerramentaNoMapa(telaX, telaY) {
   if (telaY <= 54 || telaY >= height - 68) return;
 
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 950;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 1550;
   let mundoX = telaX + camEditorX;
   let mundoY = telaY + camEditorY;
 
   let gx = floor(mundoX / GRADE_EDITOR) * GRADE_EDITOR;
   let gy = floor(mundoY / GRADE_EDITOR) * GRADE_EDITOR;
 
-  if (gx < 50 || gx > larg - 100 || gy < 50 || gy > alt - 100) return;
-
-  if (mapaCustom.modoBase === "FUTEBRAWL") {
-    let meioY = alt / 2;
-    if ((gx < 150 || gx > larg - 200) && gy > meioY - 150 && gy < meioY + 150) {
-      return;
-    }
-  }
+  if (!pontoValidoNoEditor(gx, gy, larg, alt)) return;
 
   if (ferramentaEditor === "PAREDE") {
+    if (mapaCustom.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
     let jaExiste = mapaCustom.obstaculos.some((o) => o.x === gx && o.y === gy);
     let emCimaDoSpawn = dist(gx + 25, gy + 25, mapaCustom.spawnX, mapaCustom.spawnY) < 42;
     if (!jaExiste && !emCimaDoSpawn) {
+      mapaCustom.moitas = mapaCustom.moitas.filter((m) => !(m.x === gx && m.y === gy));
       mapaCustom.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
+    }
+  } else if (ferramentaEditor === "MOITA") {
+    if (mapaCustom.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
+    let jaExisteMoita = mapaCustom.moitas.some((m) => m.x === gx && m.y === gy);
+    let temParede = mapaCustom.obstaculos.some((o) => o.x === gx && o.y === gy);
+    if (!jaExisteMoita && !temParede) {
+      mapaCustom.moitas.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
     }
   } else if (ferramentaEditor === "APAGAR") {
     for (let i = mapaCustom.obstaculos.length - 1; i >= 0; i--) {
@@ -2618,7 +2634,14 @@ function aplicarFerramentaNoMapa(telaX, telaY) {
         mapaCustom.obstaculos.splice(i, 1);
       }
     }
+    for (let i = mapaCustom.moitas.length - 1; i >= 0; i--) {
+      let m = mapaCustom.moitas[i];
+      if (mundoX >= m.x && mundoX <= m.x + m.w && mundoY >= m.y && mundoY <= m.y + m.h) {
+        mapaCustom.moitas.splice(i, 1);
+      }
+    }
   } else if (ferramentaEditor === "SPAWN") {
+    if (mapaCustom.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
     let colideParede = mapaCustom.obstaculos.some(
       (o) => gx + 25 > o.x && gx + 25 < o.x + o.w && gy + 25 > o.y && gy + 25 < o.y + o.h
     );
@@ -2630,8 +2653,8 @@ function aplicarFerramentaNoMapa(telaX, telaY) {
 }
 
 function desenharMapMaker() {
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 1400;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 800;
+  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 950;
+  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 1550;
 
   let velCam = 10;
   if (teclasPressionadas["a"] || teclasPressionadas["ArrowLeft"]) camEditorX -= velCam;
@@ -2656,20 +2679,49 @@ function desenharMapMaker() {
     line(0, y, larg, y);
   }
 
-  noFill();
-  stroke(255, 220, 60, 180);
-  strokeWeight(4);
-  rect(25, 50, larg - 50, alt - 75);
-
   if (mapaCustom.modoBase === "FUTEBRAWL") {
-    let meioY = alt / 2;
-    fill(0, 160, 255, 130);
-    stroke(150, 230, 255);
-    rect(0, meioY - 105, 25, 210, 4);
+    let golEsq = larg / 2 - 125;
+    let golDir = larg / 2 + 125;
+
+    noFill();
+    stroke(255, 220, 60, 190);
+    strokeWeight(4);
+    beginShape();
+    vertex(50, 135);
+    vertex(golEsq, 135);
+    vertex(golEsq, 35);
+    vertex(golDir, 35);
+    vertex(golDir, 135);
+    vertex(larg - 50, 135);
+    vertex(larg - 50, alt - 135);
+    vertex(golDir, alt - 135);
+    vertex(golDir, alt - 35);
+    vertex(golEsq, alt - 35);
+    vertex(golEsq, alt - 135);
+    vertex(50, alt - 135);
+    endShape(CLOSE);
+
+    stroke(255, 255, 255, 110);
+    strokeWeight(2.5);
+    line(50, alt / 2, larg - 50, alt / 2);
+    ellipse(larg / 2, alt / 2, 160, 160);
 
     fill(255, 60, 60, 130);
     stroke(255, 180, 180);
-    rect(larg - 25, meioY - 105, 25, 210, 4);
+    rect(golEsq, 35, 250, 100, 4);
+
+    fill(0, 160, 255, 130);
+    stroke(150, 230, 255);
+    rect(golEsq, alt - 135, 250, 100, 4);
+  } else {
+    noFill();
+    stroke(255, 220, 60, 180);
+    strokeWeight(4);
+    rect(25, 50, larg - 50, alt - 75);
+  }
+
+  for (let m of mapaCustom.moitas) {
+    desenharTileMoita(m.x, m.y, m.w, m.h, 255);
   }
 
   for (let o of mapaCustom.obstaculos) {
@@ -2701,7 +2753,11 @@ function desenharMapMaker() {
     let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
     let gy = floor((mouseY + camEditorY) / GRADE_EDITOR) * GRADE_EDITOR;
     noFill();
-    stroke(ferramentaEditor === "APAGAR" ? color(255, 70, 70) : color(255, 235, 80));
+    stroke(
+      ferramentaEditor === "APAGAR"
+        ? color(255, 70, 70)
+        : (ferramentaEditor === "MOITA" ? color(75, 245, 95) : color(255, 235, 80))
+    );
     strokeWeight(2.5);
     rect(gx, gy, GRADE_EDITOR, GRADE_EDITOR, 6);
   }
@@ -2722,8 +2778,8 @@ function desenharMapMaker() {
   text("SALVAR", 57, 27);
 
   fill(255, 215, 0);
-  textSize(18);
-  text("MAP MAKER (" + mapaCustom.obstaculos.length + ")", width / 2 - 45, 27);
+  textSize(17);
+  text("MAP MAKER (" + mapaCustom.obstaculos.length + "B / " + mapaCustom.moitas.length + "M)", width / 2 - 45, 27);
 
   fill(mapaCustom.modoBase === "COMBATE" ? color(120, 70, 45) : color(38, 95, 165));
   stroke(255, 215, 0);
@@ -2738,10 +2794,11 @@ function desenharMapMaker() {
   rect(0, height - 68, width, 68);
 
   let ferramentas = [
-    { id: "PAREDE", label: "PAREDE", x: 16, w: 105 },
-    { id: "APAGAR", label: "APAGAR", x: 130, w: 105 },
-    { id: "SPAWN", label: "SPAWN", x: 244, w: 105 },
-    { id: "CAMERA", label: "CÂMERA", x: 358, w: 105 }
+    { id: "PAREDE", label: "PAREDE", x: 12, w: 88 },
+    { id: "MOITA", label: "MOITA", x: 106, w: 88 },
+    { id: "APAGAR", label: "APAGAR", x: 200, w: 88 },
+    { id: "SPAWN", label: "SPAWN", x: 294, w: 88 },
+    { id: "CAMERA", label: "CÂMERA", x: 388, w: 88 }
   ];
 
   for (let f of ferramentas) {
@@ -2752,27 +2809,27 @@ function desenharMapMaker() {
     rect(f.x, height - 56, f.w, 44, 10);
     noStroke();
     fill(255);
-    textSize(12);
+    textSize(11);
     text(f.label, f.x + f.w / 2, height - 34);
   }
 
   stroke(25);
   strokeWeight(2.5);
   fill(195, 50, 60);
-  rect(520, height - 56, 115, 44, 10);
+  rect(510, height - 56, 105, 44, 10);
   noStroke();
   fill(255);
   textSize(12);
-  text("LIMPAR", 577, height - 34);
+  text("LIMPAR", 562, height - 34);
 
   stroke(25);
   strokeWeight(2.5);
   fill(255, 205, 15);
-  rect(650, height - 56, 184, 44, 10);
+  rect(625, height - 56, 213, 44, 10);
   noStroke();
   fill(25);
   textSize(16);
-  text("JOGAR MAPA", 742, height - 34);
+  text("JOGAR MAPA", 731, height - 34);
 }
 
 function tratarCliqueCanvas(e, toqueX, toqueY) {
