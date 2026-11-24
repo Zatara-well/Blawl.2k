@@ -3149,6 +3149,9 @@ function iniciarPartida() {
       for (let o of mapaCustom.obstaculos) {
         obstaculos.push(new Obstaculo(o.x, o.y, o.w, o.h));
       }
+      for (let m of mapaCustom.moitas) {
+  moitas.push({ x: m.x, y: m.y, w: m.w, h: m.h });
+      }
     } else {
       obstaculos.push(new Obstaculo(430, 420, 90, 90));
       obstaculos.push(new Obstaculo(1680, 420, 90, 90));
@@ -3175,8 +3178,8 @@ function iniciarPartida() {
     camY = constrain(jogador.y - height / 2, 0, mundoAltura - height);
     estadoJogo = "JOGANDO";
   } else if (modoSelecionado === "FUTEBRAWL") {
-    mundoLargura = 1400;
-    mundoAltura = 800;
+    mundoLargura = 950;
+    mundoAltura = 1550;
     resetarPosicoesFutebrawl(true);
 
     camX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
@@ -3201,24 +3204,24 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
   modoMira = "ATAQUE";
   celebracaoGol.ativo = false;
 
+  let meioX = mundoLargura / 2;
   let meioY = mundoAltura / 2;
-  
-    if (usandoMapaCustom) {
-    obstaculos = [];
+
+  obstaculos = [];
+  moitas = [];
+
+  if (usandoMapaCustom) {
     for (let o of mapaCustom.obstaculos) {
       obstaculos.push(new Obstaculo(o.x, o.y, o.w, o.h));
     }
-  } else {
-    obstaculos = [
-      new Obstaculo(210, meioY - 75, 32, 150),
-      new Obstaculo(mundoLargura - 242, meioY - 75, 32, 150),
-      new Obstaculo(460, 170, 75, 50),
-      new Obstaculo(mundoLargura - 535, 170, 75, 50),
-      new Obstaculo(460, mundoAltura - 220, 75, 50),
-      new Obstaculo(mundoLargura - 535, mundoAltura - 220, 75, 50)
-    ];
+    for (let m of mapaCustom.moitas) {
+      moitas.push({ x: m.x, y: m.y, w: m.w, h: m.h });
+    }
   }
-  
+
+  let spawnJogadorX = usandoMapaCustom ? mapaCustom.spawnX : meioX;
+  let spawnJogadorY = usandoMapaCustom ? mapaCustom.spawnY : mundoAltura - 310;
+
   if (sortearBots) {
     let poolDisponivel = DADOS_BRAWLERS.map((b) => b.id).filter((id) => id !== personagemSelecionado);
     let embaralhadoAzul = shuffle(poolDisponivel);
@@ -3226,24 +3229,30 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
     let todosTipos = DADOS_BRAWLERS.map((b) => b.id);
     let embaralhadoVermelho = shuffle(todosTipos);
 
-    jogador = new Brawler(430, meioY, personagemSelecionado, "AZUL", true, nicknameJogador);
+    jogador = new Brawler(spawnJogadorX, spawnJogadorY, personagemSelecionado, "AZUL", true, nicknameJogador);
+    jogador.angulo = -HALF_PI;
 
-      let aliado1 = new Brawler(300, 180, embaralhadoAzul[0], "AZUL", false);
-    aliado1.zonaPreferidaY = 170;
+    let aliado1 = new Brawler(220, mundoAltura - 260, embaralhadoAzul[0], "AZUL", false);
+    aliado1.zonaPreferidaX = 220;
+    aliado1.angulo = -HALF_PI;
 
-    let aliado2 = new Brawler(300, mundoAltura - 180, embaralhadoAzul[1], "AZUL", false);
-    aliado2.zonaPreferidaY = mundoAltura - 170;
+    let aliado2 = new Brawler(mundoLargura - 220, mundoAltura - 260, embaralhadoAzul[1], "AZUL", false);
+    aliado2.zonaPreferidaX = mundoLargura - 220;
+    aliado2.angulo = -HALF_PI;
 
     aliados = [aliado1, aliado2];
 
-    let ini1 = new Brawler(mundoLargura - 430, meioY, embaralhadoVermelho[0], "VERMELHO", false);
-    ini1.zonaPreferidaY = meioY;
+    let ini1 = new Brawler(meioX, 310, embaralhadoVermelho[0], "VERMELHO", false);
+    ini1.zonaPreferidaX = meioX;
+    ini1.angulo = HALF_PI;
 
-    let ini2 = new Brawler(mundoLargura - 300, 180, embaralhadoVermelho[1], "VERMELHO", false);
-    ini2.zonaPreferidaY = 170;
+    let ini2 = new Brawler(220, 260, embaralhadoVermelho[1], "VERMELHO", false);
+    ini2.zonaPreferidaX = 220;
+    ini2.angulo = HALF_PI;
 
-    let ini3 = new Brawler(mundoLargura - 300, mundoAltura - 180, embaralhadoVermelho[2], "VERMELHO", false);
-    ini3.zonaPreferidaY = mundoAltura - 170;
+    let ini3 = new Brawler(mundoLargura - 220, 260, embaralhadoVermelho[2], "VERMELHO", false);
+    ini3.zonaPreferidaX = mundoLargura - 220;
+    ini3.angulo = HALF_PI;
 
     inimigos = [ini1, ini2, ini3];
 
@@ -3256,16 +3265,16 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
     registrarParticipantePartida(ini3);
   } else {
     let posAzul = [
-      { x: 430, y: meioY },
-      { x: 300, y: 180 },
-      { x: 300, y: mundoAltura - 180 }
+      { x: spawnJogadorX, y: spawnJogadorY },
+      { x: 220, y: mundoAltura - 260 },
+      { x: mundoLargura - 220, y: mundoAltura - 260 }
     ];
     let equipeAzul = [jogador, ...aliados];
     for (let i = 0; i < equipeAzul.length; i++) {
       let b = equipeAzul[i];
       b.x = posAzul[i].x;
       b.y = posAzul[i].y;
-      b.angulo = 0;
+      b.angulo = -HALF_PI;
       b.vida = b.vidaMax;
       b.municao = 3;
       b.recarga = 0;
@@ -3284,15 +3293,15 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
     }
 
     let posVerm = [
-      { x: mundoLargura - 430, y: meioY },
-      { x: mundoLargura - 300, y: 180 },
-      { x: mundoLargura - 300, y: mundoAltura - 180 }
+      { x: meioX, y: 310 },
+      { x: 220, y: 260 },
+      { x: mundoLargura - 220, y: 260 }
     ];
     for (let i = 0; i < inimigos.length; i++) {
       let b = inimigos[i];
       b.x = posVerm[i].x;
       b.y = posVerm[i].y;
-      b.angulo = PI;
+      b.angulo = HALF_PI;
       b.vida = b.vidaMax;
       b.municao = 3;
       b.recarga = 0;
@@ -3312,7 +3321,7 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
   }
 
   bola = {
-    x: mundoLargura / 2,
+    x: meioX,
     y: meioY,
     vx: 0,
     vy: 0,
