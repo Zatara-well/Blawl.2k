@@ -2660,7 +2660,8 @@ function desenharIntroFutebrawl() {
 // ==========================================
 // SUBTELA: SELEÇÃO DE MODO
 // ==========================================
-function desenharTelaModos() {
+
+  function desenharTelaModos() {
   background(20, 32, 62);
 
   fill(255, 215, 0);
@@ -2669,72 +2670,56 @@ function desenharTelaModos() {
   text("ESCOLHA O EVENTO", width / 2, 65);
 
   // Card 1: COMBATE
-  let selCombate = modoSelecionado === "COMBATE" && !usandoMapaCustom;
+  let selCombate = modoSelecionado === "COMBATE";
   strokeWeight(4);
   stroke(selCombate ? color(0, 255, 120) : color(80, 95, 130));
   fill(75, 48, 38);
-  rect(45, 145, 240, 230, 18);
+  rect(115, 145, 270, 230, 18);
 
   fill(65, 215, 85);
   stroke(20);
   strokeWeight(3);
-  ellipse(165, 215, 56, 52);
-  rect(151, 232, 28, 14, 4);
+  ellipse(250, 215, 56, 52);
+  rect(236, 232, 28, 14, 4);
   fill(20);
   noStroke();
-  ellipse(155, 213, 11, 13);
-  ellipse(175, 213, 11, 13);
+  ellipse(240, 213, 11, 13);
+  ellipse(260, 213, 11, 13);
 
   fill(255);
   textSize(22);
-  text("COMBATE", 165, 285);
+  text("COMBATE", 250, 285);
   fill(230);
   textSize(12);
-  text("Caverna Convulsiva\n10 Brawlers • Mapa Gigante", 165, 328);
+  let subCombate = mapasOficiais.COMBATE
+    ? "Mapa Oficial do Host\n10 Brawlers • Mapa Gigante"
+    : "Caverna Convulsiva\n10 Brawlers • Mapa Gigante";
+  text(subCombate, 250, 328);
 
   // Card 2: FUTE-BRAWL
-  let selFute = modoSelecionado === "FUTEBRAWL" && !usandoMapaCustom;
+  let selFute = modoSelecionado === "FUTEBRAWL";
   strokeWeight(4);
   stroke(selFute ? color(0, 255, 120) : color(80, 95, 130));
   fill(35, 68, 105);
-  rect(305, 145, 240, 230, 18);
+  rect(465, 145, 270, 230, 18);
 
   fill(255);
   stroke(20);
   strokeWeight(3);
-  ellipse(425, 220, 56, 56);
+  ellipse(600, 220, 56, 56);
   fill(35, 110, 130);
   noStroke();
-  ellipse(425, 220, 24, 24);
+  ellipse(600, 220, 24, 24);
 
   fill(255);
   textSize(22);
-  text("FUTE-BRAWL", 425, 285);
+  text("FUTE-BRAWL", 600, 285);
   fill(230);
   textSize(12);
-  text("Tiro de meta\n3v3 • 2 Minutos", 425, 328);
-
-  // Card 3: MAPA CRIADO
-  strokeWeight(4);
-  stroke(usandoMapaCustom ? color(0, 255, 120) : color(80, 95, 130));
-  fill(46, 82, 54);
-  rect(565, 145, 240, 230, 18);
-
-  fill(255, 205, 35);
-  stroke(20);
-  strokeWeight(3);
-  rect(657, 192, 56, 56, 10);
-  stroke(20);
-  line(685, 192, 685, 248);
-  line(657, 220, 713, 220);
-
-  noStroke();
-  fill(255);
-  textSize(22);
-  text("MAPA CRIADO", 685, 285);
-  fill(230);
-  textSize(12);
-  text("Base: " + mapaCustom.modoBase + "\n" + mapaCustom.obstaculos.length + " blocos • " + mapaCustom.moitas.length + " moitas", 685, 328);
+  let subFute = mapasOficiais.FUTEBRAWL
+    ? "Mapa Oficial do Host\n3v3 • 2 Minutos"
+    : "Tiro de meta\n3v3 • 2 Minutos";
+  text(subFute, 600, 328);
 
   // Botão Confirmar
   noStroke();
@@ -2747,7 +2732,7 @@ function desenharTelaModos() {
   noStroke();
   fill(25);
   textSize(22);
-    text("CONFIRMAR", width / 2, 470);
+  text("CONFIRMAR", width / 2, 470);
 }
 
 // ==========================================
