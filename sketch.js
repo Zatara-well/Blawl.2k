@@ -826,36 +826,62 @@ function desenharMenu() {
   fill(255);
     text("JOGAR", jogarX + jogarW / 2, jogarY + jogarH / 2);
 
-  // Botão MAP MAKER (lado direito do Lobby)
-  let btnMX = 680;
-  let btnMY = 255;
-  let btnMW = 148;
-  let btnMH = 74;
+    // Botão discreto de Login Gmail (Host) no topo direito do Lobby
+  let btnHostX = width - 178;
+  let btnHostY = 62;
+  let btnHostW = 164;
+  let btnHostH = 34;
 
   noStroke();
-  fill(12, 20, 40);
-  rect(btnMX, btnMY + 5, btnMW, btnMH, 10);
-
-  stroke(25);
-  strokeWeight(3);
-  fill(46, 62, 92);
-  rect(btnMX, btnMY, btnMW, btnMH, 10);
-
-  fill(85, 215, 115);
-  stroke(25);
-  strokeWeight(2);
-  rect(btnMX + 16, btnMY + 23, 26, 26, 5);
-  stroke(25);
-  line(btnMX + 29, btnMY + 23, btnMX + 29, btnMY + 49);
-  line(btnMX + 16, btnMY + 36, btnMX + 42, btnMY + 36);
+  fill(12, 20, 40, 210);
+  rect(btnHostX, btnHostY, btnHostW, btnHostH, 8);
+  stroke(ehHostAutorizado ? color(0, 255, 130) : color(90, 135, 210));
+  strokeWeight(1.8);
+  noFill();
+  rect(btnHostX, btnHostY, btnHostW, btnHostH, 8);
 
   noStroke();
-  fill(0, 180);
-  textSize(14);
-  text("MAP MAKER", btnMX + 97, btnMY + 39);
-  fill(255);
-  text("MAP MAKER", btnMX + 96, btnMY + 37);
-}
+  fill(ehHostAutorizado ? color(85, 255, 135) : color(195, 220, 255));
+  textSize(11);
+  if (ehHostAutorizado) {
+    text("HOST LOGADO • SAIR", btnHostX + btnHostW / 2, btnHostY + btnHostH / 2);
+  } else if (usuarioGoogleAtual) {
+    text("SEM PERMISSÃO • SAIR", btnHostX + btnHostW / 2, btnHostY + btnHostH / 2);
+  } else {
+    text("LOGIN HOST (GMAIL)", btnHostX + btnHostW / 2, btnHostY + btnHostH / 2);
+  }
+
+  // Botão MAP MAKER: SÓ APARECE SE O GMAIL LOGADO FOR DO HOST AUTORIZADO
+  if (ehHostAutorizado) {
+    let btnMX = 680;
+    let btnMY = 255;
+    let btnMW = 148;
+    let btnMH = 74;
+
+    noStroke();
+    fill(12, 20, 40);
+    rect(btnMX, btnMY + 5, btnMW, btnMH, 10);
+
+    stroke(25);
+    strokeWeight(3);
+    fill(46, 62, 92);
+    rect(btnMX, btnMY, btnMW, btnMH, 10);
+
+    fill(85, 215, 115);
+    stroke(25);
+    strokeWeight(2);
+    rect(btnMX + 16, btnMY + 23, 26, 26, 5);
+    stroke(25);
+    line(btnMX + 29, btnMY + 23, btnMX + 29, btnMY + 49);
+    line(btnMX + 16, btnMY + 36, btnMX + 42, btnMY + 36);
+
+    noStroke();
+    fill(0, 180);
+    textSize(14);
+    text("MAP MAKER", btnMX + 97, btnMY + 39);
+    fill(255);
+    text("MAP MAKER", btnMX + 96, btnMY + 37);
+  }
 
 function desenharBrawlerPorTipo(tipo, x, y, angulo, escala) {
   if (tipo === "ASH") {
