@@ -2925,18 +2925,6 @@ function aplicarFerramentaNoMapa(telaX, telaY) {
 
   if (!pontoValidoNoEditor(gx, gy, larg, alt)) return;
 
-  if (ferramentaEditor === "SPAWN") {
-    if (editorMapa.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
-    let colideParede = editorMapa.obstaculos.some(
-      (o) => gx + 25 > o.x && gx + 25 < o.x + o.w && gy + 25 > o.y && gy + 25 < o.y + o.h
-    );
-    if (!colideParede) {
-      editorMapa.spawnX = gx + 25;
-      editorMapa.spawnY = gy + 25;
-    }
-    return;
-  }
-
   aplicarFerramentaNoCelula(gx, gy, larg, alt);
 
   if (espelharMapa) {
