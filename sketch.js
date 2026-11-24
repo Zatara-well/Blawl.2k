@@ -76,6 +76,21 @@ function inicializarFirebaseHostESincronizacao() {
   authFirebaseInicializado = true;
 
   try {
+    // Captura o retorno do login no mobile (signInWithRedirect)
+    firebase.auth().getRedirectResult()
+      .then((res) => {
+        if (res && res.user) {
+          verificarPermissaoHost(res.user);
+          if (!ehHostAutorizado) {
+            alert("O e-mail " + res.user.email + " não está na lista de Hosts autorizados.");
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Erro no retorno do login Google:", err);
+        alert("Erro ao concluir login Google: " + err.message);
+      });
+
     firebase.auth().onAuthStateChanged((user) => {
       verificarPermissaoHost(user);
     });
@@ -110,16 +125,26 @@ function entrarComGoogleHost() {
   }
   let provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
-  firebase.auth().signInWithPopup(provider)
-    .then((res) => {
-      verificarPermissaoHost(res.user);
-      if (!ehHostAutorizado) {
-        alert("O e-mail " + res.user.email + " não está na lista de Hosts autorizados.");
-      }
-    })
-    .catch((err) => {
-      console.error("Erro no login Google:", err);
+
+  // No mobile usa Redirect para não ser bloqueado pelo navegador; no PC usa Popup
+  if (ehMobile || detectarDispositivoMobile()) {
+    firebase.auth().signInWithRedirect(provider).catch((err) => {
+      console.error("Erro no redirecionamento Google:", err);
+      alert("Erro ao abrir login Google: " + err.message);
     });
+  } else {
+    firebase.auth().signInWithPopup(provider)
+      .then((res) => {
+        verificarPermissaoHost(res.user);
+        if (!ehHostAutorizado) {
+          alert("O e-mail " + res.user.email + " não está na lista de Hosts autorizados.");
+        }
+      })
+      .catch((err) => {
+        console.error("Erro no login Google:", err);
+        alert("Erro no login Google: " + err.message);
+      });
+  }
 }
 
 function sairContaGoogleHost() {
