@@ -3671,6 +3671,13 @@ function lancaBolaComAlcance(chutador, angulo, alcance, velInicial, ehSuper) {
   bola.vy = sin(angulo) * velInicial;
 }
 
+function calcularTrajetoriaBola(brawler, angulo, alcance) {
+  let raioBola = bola ? bola.raio : 15;
+  let ox = brawler.x + cos(angulo) * (brawler.raio + raioBola + 6);
+  let oy = brawler.y + sin(angulo) * (brawler.raio + raioBola + 6);
+  return calcularTrajetoriaSimulada(ox, oy, angulo, alcance, raioBola, false);
+}
+
 function calcularTrajetoriaSimulada(origemX, origemY, angulo, alcance, raioObj, ignoraGol) {
   let golEsq = mundoLargura / 2 - 125;
   let golDir = mundoLargura / 2 + 125;
@@ -3735,6 +3742,20 @@ function calcularTrajetoriaSimulada(origemX, origemY, angulo, alcance, raioObj, 
 
   pontos.push({ x: simX, y: simY });
   return { pontos: pontos, ricochetes: ricochetes };
+}
+
+function criarFaiscasRicochete(x, y, ehSuper) {
+  for (let i = 0; i < (ehSuper ? 10 : 5); i++) {
+    particulas.push({
+      x: x,
+      y: y,
+      vx: random(-3.5, 3.5),
+      vy: random(-3.5, 3.5),
+      tam: random(4, 8),
+      cor: ehSuper ? color(255, 210, 40, 230) : color(255, 255, 255, 210),
+      vida: 14
+    });
+  }
 }
 
 function atualizarBola() {
