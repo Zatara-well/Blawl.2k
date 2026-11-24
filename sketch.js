@@ -225,8 +225,7 @@ function salvarMapaCustom(publicarNaNuvem = true) {
 
   let copiaMapa = {
     modoBase: editorMapa.modoBase,
-    spawnX: editorMapa.spawnX,
-    spawnY: editorMapa.spawnY,
+    spawns: spawnsEditor.map((s) => ({ x: s.x, y: s.y })),
     obstaculos: editorMapa.obstaculos.map((o) => ({ x: o.x, y: o.y, w: o.w, h: o.h })),
     moitas: editorMapa.moitas.map((m) => ({ x: m.x, y: m.y, w: m.w, h: m.h }))
   };
