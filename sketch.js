@@ -2854,7 +2854,6 @@ function carregarModoNoEditor(modo) {
   }
   
   spawnsEditor = editorMapa.spawns.map((s) => ({ x: s.x, y: s.y }));
-  spawnArrastandoIndex = -1;
 
   let focoX = spawnsEditor.length > 0 ? spawnsEditor[0].x : larg / 2;
   let focoY = spawnsEditor.length > 0 ? spawnsEditor[0].y : (modo === "COMBATE" ? alt / 2 : alt - 310);
