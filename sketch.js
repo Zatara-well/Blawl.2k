@@ -2556,7 +2556,7 @@ function desenharTelaModos() {
   text("MAPA CRIADO", 685, 285);
   fill(230);
   textSize(12);
-  text("Base: " + mapaCustom.modoBase + "\n" + mapaCustom.obstaculos.length + " blocos salvos", 685, 328);
+  text("Base: " + mapaCustom.modoBase + "\n" + mapaCustom.obstaculos.length + " blocos • " + mapaCustom.moitas.length + " moitas", 685, 328);
 
   // Botão Confirmar
   noStroke();
