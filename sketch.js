@@ -2833,6 +2833,9 @@ function desenharIntroFutebrawl() {
 // ==========================================
 // TELA DO MAP MAKER (EDITOR DE MAPAS)
 // ==========================================
+function ehLadoAzul(x, y, larguraMapa, alturaMapa) {
+  return y >= alturaMapa / 2;
+}
 function carregarModoNoEditor(modo) {
   let larg = modo === "COMBATE" ? 2200 : 950;
   let alt = modo === "COMBATE" ? 2200 : 1550;
