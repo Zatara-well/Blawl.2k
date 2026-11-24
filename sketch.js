@@ -3017,16 +3017,6 @@ function desenharMapMaker() {
     rect(o.x + 5, o.y + 5, o.w - 10, o.h - 10, 4);
   }
 
-  fill(0, 255, 120, 90);
-  stroke(0, 255, 120);
-  strokeWeight(3);
-  desenharSpawnsMapMaker(editorMapa.modoBase, larg, alt);
-  noStroke();
-  fill(255);
-  textStyle(BOLD);
-  textSize(10);
-  text("SPAWN", editorMapa.spawnX, editorMapa.spawnY);
-
   if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA") {
     let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
     let gy = floor((mouseY + camEditorY) / GRADE_EDITOR) * GRADE_EDITOR;
