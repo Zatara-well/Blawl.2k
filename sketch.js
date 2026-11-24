@@ -3942,53 +3942,118 @@ function criarTextoDano(x, y, valor, cor, ehCritico = false, opcoes = {}) {
 // ==========================================
 // RENDERIZAÇÃO DO MUNDO E HUD
 // ==========================================
+function desenharTileMoita(x, y, w, h, opacidade = 255) {
+  push();
+  noStroke();
+  fill(18, 72, 26, opacidade * 0.65);
+  rect(x + 2, y + 4, w - 4, h - 2, 10);
+
+  fill(46, 168, 56, opacidade);
+  stroke(22, 92, 32, opacidade);
+  strokeWeight(2);
+  rect(x + 2, y + 2, w - 4, h - 4, 10);
+
+  noStroke();
+  fill(84, 206, 72, opacidade);
+  ellipse(x + w * 0.34, y + h * 0.36, 18, 15);
+  ellipse(x + w * 0.66, y + h * 0.38, 17, 14);
+  ellipse(x + w * 0.5, y + h * 0.66, 20, 15);
+
+  fill(128, 232, 96, opacidade * 0.75);
+  ellipse(x + w * 0.34, y + h * 0.33, 8, 6);
+  ellipse(x + w * 0.66, y + h * 0.35, 8, 6);
+  pop();
+}
+
+function brawlerEstaNaMoita(b) {
+  for (let m of moitas) {
+    if (b.x >= m.x && b.x <= m.x + m.w && b.y >= m.y && b.y <= m.y + m.h) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function inimigoReveladoNaMoita(b) {
+  if (!brawlerEstaNaMoita(b)) return true;
+  if (b.estaAtacandoAgora()) return true;
+  if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === b) return true;
+
+  let visaoAliada = [jogador, ...aliados, ...ratosAsh.filter((r) => r.time === jogador.time)];
+  for (let v of visaoAliada) {
+    if (v && v.vida > 0 && dist(b.x, b.y, v.x, v.y) < 125) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function desenharJogo() {
   push();
   translate(-camX, -camY);
 
   noStroke();
-  if (modoSelecionado === "FUTEBRAWL") {
-    let larguraFaixa = 80;
-    for (let i = 0; i < mundoLargura / larguraFaixa; i++) {
+    if (modoSelecionado === "FUTEBRAWL") {
+    let alturaFaixa = 80;
+    for (let i = 0; i < mundoAltura / alturaFaixa; i++) {
       fill(i % 2 === 0 ? color(38, 145, 62) : color(32, 128, 53));
-      rect(i * larguraFaixa, 0, larguraFaixa, mundoAltura);
+      rect(0, i * alturaFaixa, mundoLargura, alturaFaixa);
     }
 
+    let meioX = mundoLargura / 2;
     let meioY = mundoAltura / 2;
+    let golEsq = meioX - 125;
+    let golDir = meioX + 125;
 
-    stroke(255, 255, 255, 130);
+    // Área externa escura ao redor do estádio (igual ao Brawl Stars)
+    fill(20, 78, 36);
+    rect(0, 0, mundoLargura, 135);
+    rect(0, mundoAltura - 135, mundoLargura, 135);
+    rect(0, 0, 50, mundoAltura);
+    rect(mundoLargura - 50, 0, 50, mundoAltura);
+
+    // Gramado interno dos dois gols recuados
+    fill(35, 138, 58);
+    rect(golEsq, 35, 250, 100);
+    rect(golEsq, mundoAltura - 135, 250, 100);
+
+    // Linhas brancas do campo
+    stroke(255, 255, 255, 135);
     strokeWeight(3);
     noFill();
-    rect(25, 52, mundoLargura - 50, mundoAltura - 77);
-    line(mundoLargura / 2, 52, mundoLargura / 2, mundoAltura - 25);
-    ellipse(mundoLargura / 2, meioY, 160, 160);
-    fill(255, 255, 255, 160);
-    ellipse(mundoLargura / 2, meioY, 10, 10);
+    rect(50, 135, mundoLargura - 100, mundoAltura - 270);
+    line(50, meioY, mundoLargura - 50, meioY);
+    ellipse(meioX, meioY, 160, 160);
+    fill(255, 255, 255, 165);
+    ellipse(meioX, meioY, 10, 10);
 
+    // Grandes áreas e pequenas áreas (Cima e Baixo)
     noFill();
-    rect(25, meioY - 165, 145, 330);
-    rect(mundoLargura - 170, meioY - 165, 145, 330);
-    rect(25, meioY - 110, 60, 220);
-    rect(mundoLargura - 85, meioY - 110, 60, 220);
+    rect(meioX - 210, 135, 420, 165);
+    rect(meioX - 210, mundoAltura - 300, 420, 165);
+    rect(meioX - 145, 135, 290, 75);
+    rect(meioX - 145, mundoAltura - 210, 290, 75);
 
-    fill(0, 160, 255, 140);
-    stroke(150, 230, 255);
-    rect(0, meioY - 105, 25, 210, 4);
-
-    fill(255, 60, 60, 140);
-    stroke(255, 180, 180);
-    rect(mundoLargura - 25, meioY - 105, 25, 210, 4);
-  } else {
-    fill(35, 125, 52);
-    for (let gx = 40; gx < mundoLargura; gx += 80) {
-      for (let gy = 60; gy < mundoAltura; gy += 80) {
-        rect(gx, gy, 40, 40, 8);
-      }
-    }
-    stroke(255, 255, 255, 90);
+    // Gol Vermelho (Cima)
+    fill(255, 60, 60, 125);
+    stroke(255, 150, 150);
     strokeWeight(4);
-    noFill();
-    rect(20, 50, mundoLargura - 40, mundoAltura - 70);
+    rect(golEsq, 35, 250, 100, 6);
+
+    // Gol Azul (Baixo)
+    fill(0, 160, 255, 125);
+    stroke(140, 225, 255);
+    strokeWeight(4);
+    rect(golEsq, mundoAltura - 135, 250, 100, 6);
+
+    // Traves nos cantos dos gols
+    noStroke();
+    fill(235, 45, 55);
+    ellipse(golEsq, 135, 22, 22);
+    ellipse(golDir, 135, 22, 22);
+    fill(35, 165, 255);
+    ellipse(golEsq, mundoAltura - 135, 22, 22);
+    ellipse(golDir, mundoAltura - 135, 22, 22);
   }
 
   for (let rc of rachadurasChao) {
@@ -4034,6 +4099,17 @@ function desenharJogo() {
   for (let o of obstaculos) {
     o.desenhar();
   }
+    for (let m of moitas) {
+    let aliadoPerto = false;
+    let equipeAzul = [jogador, ...aliados];
+    for (let al of equipeAzul) {
+      if (al && al.vida > 0 && dist(al.x, al.y, m.x + m.w / 2, m.y + m.h / 2) < 68) {
+        aliadoPerto = true;
+        break;
+      }
+    }
+    desenharTileMoita(m.x, m.y, m.w, m.h, aliadoPerto ? 115 : 255);
+  }
 
   if (modoSelecionado === "COMBATE") {
     noFill();
@@ -4057,6 +4133,7 @@ function desenharJogo() {
   let todos = [jogador, ...aliados, ...inimigos];
   for (let b of todos) {
     if (b.vida > 0) {
+      if (b.time === jogador.time || inimigoReveladoNaMoita(b)) {
       b.desenhar();
     } else if (modoSelecionado === "FUTEBRAWL" && b.respawnTimer > 0) {
       b.desenharRespawn();
