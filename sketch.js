@@ -2843,23 +2843,26 @@ function carregarModoNoEditor(modo) {
   if (oficial) {
     editorMapa = {
       modoBase: modo,
-      spawnX: oficial.spawnX,
-      spawnY: oficial.spawnY,
+      spawns: (oficial.spawns || []).map((s) => ({ x: s.x, y: s.y })),
       obstaculos: (oficial.obstaculos || []).map((o) => ({ x: o.x, y: o.y, w: o.w, h: o.h })),
       moitas: (oficial.moitas || []).map((m) => ({ x: m.x, y: m.y, w: m.w, h: m.h }))
     };
   } else {
     editorMapa = {
       modoBase: modo,
-      spawnX: modo === "COMBATE" ? 400 : larg / 2,
-      spawnY: modo === "COMBATE" ? 400 : alt - 310,
+      spawns: [],
       obstaculos: modo === "COMBATE" ? obterObstaculosPadraoCombate() : [],
       moitas: []
     };
   }
+  
+  spawnsEditor = editorMapa.spawns.map((s) => ({ x: s.x, y: s.y }));
+  spawnArrastandoIndex = -1;
 
-  camEditorX = constrain(editorMapa.spawnX - width / 2, 0, max(0, larg - width));
-  camEditorY = constrain(editorMapa.spawnY - height / 2, 0, max(0, alt - height));
+  let focoX = spawnsEditor.length > 0 ? spawnsEditor[0].x : larg / 2;
+  let focoY = spawnsEditor.length > 0 ? spawnsEditor[0].y : (modo === "COMBATE" ? alt / 2 : alt - 310);
+  camEditorX = constrain(focoX - width / 2, 0, max(0, larg - width));
+  camEditorY = constrain(focoY - height / 2, 0, max(0, alt - height));
 }
 
 function abrirMapMaker() {
