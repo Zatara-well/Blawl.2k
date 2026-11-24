@@ -2894,7 +2894,7 @@ function aplicarFerramentaNoCelula(gx, gy, larg, alt) {
   if (ferramentaEditor === "PAREDE") {
     if (editorMapa.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
     let jaExiste = editorMapa.obstaculos.some((o) => o.x === gx && o.y === gy);
-    let emCimaDoSpawn = dist(gx + 25, gy + 25, editorMapa.spawnX, editorMapa.spawnY) < 42;
+    let emCimaDoSpawn = spawnsEditor.some((s) => dist(gx + 25, gy + 25, s.x, s.y) < 34);
     if (!jaExiste && !emCimaDoSpawn) {
       editorMapa.moitas = editorMapa.moitas.filter((m) => !(m.x === gx && m.y === gy));
       editorMapa.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
