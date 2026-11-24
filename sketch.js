@@ -557,50 +557,31 @@ function mouseWheel(event) {
   }
 }
 
-function draw() {
+  function draw() {
   background(40, 140, 60);
-  
+
   let agora = performance.now();
   let dt = ultimoTempoReal > 0 ? min(agora - ultimoTempoReal, 50) : PASSO_FIXO_MS;
   ultimoTempoReal = agora;
-  
+
   if (estadoJogo === "NOME_INICIAL") {
     acumuladorTempo = 0;
     desenharTelaNickname();
-    } else if (estadoJogo === "MENU") {
-    // Botão de Login / Logout do Host (Gmail) no topo direito
-    if (cx >= width - 178 && cx <= width - 14 && cy >= 62 && cy <= 96) {
-      if (usuarioGoogleAtual) {
-        sairContaGoogleHost();
-      } else {
-        entrarComGoogleHost();
-      }
-      return;
-    }
-    // Botão MAP MAKER (só responde se ehHostAutorizado for true)
-    if (ehHostAutorizado && cx > 680 && cx < 828 && cy > 255 && cy < 329) {
-      abrirMapMaker();
-      return;
-    }
-    if (ehBotaoDireito) return;
-    if (cx >= 14 && cx <= 214 && cy >= 8 && cy <= 46) {
-      mostrarFormularioNickname(true);
-      return;
-    }
-    if (cx > 22 && cx < 170 && cy > 255 && cy < 329) {
-      scrollBrawlers = 0;
-      estadoJogo = "SELECAO_BRAWLER";
-      return;
-    }
-    if (cx > 365 && cx < 630 && cy > 505 && cy < 579) {
-      estadoJogo = "SELECAO_MODO";
-      return;
-    }
-    if (cx > 642 && cx < 830 && cy > 505 && cy < 579) {
-      iniciarPartida();
-      return;
-    }
-    
+  } else if (estadoJogo === "MENU") {
+    acumuladorTempo = 0;
+    desenharMenu();
+  } else if (estadoJogo === "SELECAO_BRAWLER") {
+    acumuladorTempo = 0;
+    desenharTelaBrawlers();
+  } else if (estadoJogo === "DETALHES_BRAWLER") {
+    acumuladorTempo = 0;
+    desenharTelaDetalhesBrawler();
+  } else if (estadoJogo === "SELECAO_MODO") {
+    acumuladorTempo = 0;
+    desenharTelaModos();
+  } else if (estadoJogo === "MAP_MAKER") {
+    acumuladorTempo = 0;
+    desenharMapMaker();
   } else if (estadoJogo === "INTRO_FUTEBRAWL") {
     acumuladorTempo += dt;
     let passos = 0;
@@ -900,6 +881,7 @@ function desenharMenu() {
     fill(255);
     text("MAP MAKER", btnMX + 96, btnMY + 37);
   }
+}
 
 function desenharBrawlerPorTipo(tipo, x, y, angulo, escala) {
   if (tipo === "ASH") {
