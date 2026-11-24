@@ -3255,7 +3255,6 @@ function mouseReleased() {
   if (ehMobile || touches.length > 0) return;
   if (estadoJogo === "MAP_MAKER") {
     arrastandoCameraEditor = false;
-    salvarMapaCustom();
   }
 }
 
@@ -7813,7 +7812,6 @@ function registrarEventosTouchCanvas() {
   function encerrarToques(e) {
     if (estadoJogo === "MAP_MAKER") {
       arrastandoCameraEditor = false;
-      salvarMapaCustom();
     }
     for (let i = 0; i < e.changedTouches.length; i++) {
       let t = e.changedTouches[i];
