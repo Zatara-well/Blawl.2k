@@ -24,8 +24,8 @@ const CHAVE_STORAGE_NICKNAME = "brawl_stars_2d_nickname_v1";
 // SISTEMA DE HOST (GMAIL) E MAP MAKER OFICIAL
 // ==========================================
 const EMAILS_HOSTS_AUTORIZADOS = [
-  "seuemail@gmail.com",
-  "teammate1@gmail.com"
+  "samu79634@gmail.com",
+  "samuel.ferraz19@escola.pr.gov.br"
 ];
 
 let usuarioGoogleAtual = null;
