@@ -59,11 +59,26 @@ let editorMapa = {
   moitas: []
 };
 
+function obterEmailUsuarioFirebase(user) {
+  if (!user) return "";
+  if (user.email) return user.email.toLowerCase().trim();
+  if (user.providerData && user.providerData.length > 0) {
+    for (let p of user.providerData) {
+      if (p && p.email) {
+        return p.email.toLowerCase().trim();
+      }
+    }
+  }
+  return "";
+}
+
 function verificarPermissaoHost(user) {
   usuarioGoogleAtual = user || null;
-  if (user && user.email) {
-    let emailLimpo = user.email.toLowerCase().trim();
-    ehHostAutorizado = EMAILS_HOSTS_AUTORIZADOS.map((e) => e.toLowerCase().trim()).includes(emailLimpo);
+  let emailLimpo = obterEmailUsuarioFirebase(user);
+  if (emailLimpo !== "") {
+    ehHostAutorizado = EMAILS_HOSTS_AUTORIZADOS
+      .map((e) => e.toLowerCase().trim())
+      .includes(emailLimpo);
   } else {
     ehHostAutorizado = false;
   }
@@ -73,46 +88,56 @@ function inicializarFirebaseHostESincronizacao() {
   if (authFirebaseInicializado || typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
     return;
   }
+  if (typeof firebase.auth !== "function") {
+    return;
+  }
   authFirebaseInicializado = true;
 
   try {
-    // Captura o retorno do login no mobile (signInWithRedirect)
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+
+    // Garante leitura imediata caso a sessão já esteja em cache
+    if (firebase.auth().currentUser) {
+      verificarPermissaoHost(firebase.auth().currentUser);
+    }
+
+    // Fallback caso tenha ocorrido login por redirect
     firebase.auth().getRedirectResult()
       .then((res) => {
         if (res && res.user) {
           verificarPermissaoHost(res.user);
           if (!ehHostAutorizado) {
-            alert("O e-mail " + res.user.email + " não está na lista de Hosts autorizados.");
+            alert("O e-mail " + obterEmailUsuarioFirebase(res.user) + " não está na lista de Hosts autorizados.");
           }
         }
       })
       .catch((err) => {
         console.error("Erro no retorno do login Google:", err);
-        alert("Erro ao concluir login Google: " + err.message);
       });
 
     firebase.auth().onAuthStateChanged((user) => {
       verificarPermissaoHost(user);
     });
 
-    // Escuta em tempo real os mapas oficiais publicados pelo Host para TODOS os jogadores
-    firebase.firestore().collection("config_jogo").doc("mapas_oficiais").onSnapshot(
-      (doc) => {
-        if (doc.exists) {
-          let dados = doc.data();
-          if (dados) {
-            mapasOficiais.COMBATE = dados.COMBATE || null;
-            mapasOficiais.FUTEBRAWL = dados.FUTEBRAWL || null;
-            try {
-              window.localStorage.setItem(CHAVE_STORAGE_MAPAS_OFICIAIS, JSON.stringify(mapasOficiais));
-            } catch (e) {}
+    if (typeof firebase.firestore === "function") {
+      firebase.firestore().collection("config_jogo").doc("mapas_oficiais").onSnapshot(
+        (doc) => {
+          if (doc.exists) {
+            let dados = doc.data();
+            if (dados) {
+              mapasOficiais.COMBATE = dados.COMBATE || null;
+              mapasOficiais.FUTEBRAWL = dados.FUTEBRAWL || null;
+              try {
+                window.localStorage.setItem(CHAVE_STORAGE_MAPAS_OFICIAIS, JSON.stringify(mapasOficiais));
+              } catch (e) {}
+            }
           }
+        },
+        (err) => {
+          console.warn("Aviso ao ler mapas do Firestore:", err);
         }
-      },
-      (err) => {
-        console.warn("Aviso ao ler mapas do Firestore:", err);
-      }
-    );
+      );
+    }
   } catch (e) {
     console.warn("Firebase não configurado:", e);
   }
@@ -123,28 +148,34 @@ function entrarComGoogleHost() {
     alert("Configure o Firebase no index.html para vincular o Gmail do Host.");
     return;
   }
+
+  inicializarFirebaseHostESincronizacao();
+
   let provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
 
-  // No mobile usa Redirect para não ser bloqueado pelo navegador; no PC usa Popup
-  if (ehMobile || detectarDispositivoMobile()) {
-    firebase.auth().signInWithRedirect(provider).catch((err) => {
-      console.error("Erro no redirecionamento Google:", err);
-      alert("Erro ao abrir login Google: " + err.message);
+  // Usa Popup inclusive no mobile (o toque direto libera o popup e evita perda de sessão do Redirect)
+  firebase.auth().signInWithPopup(provider)
+    .then((res) => {
+      verificarPermissaoHost(res.user);
+      if (!ehHostAutorizado) {
+        let emailDetectado = obterEmailUsuarioFirebase(res.user) || "(e-mail oculto)";
+        alert("O e-mail " + emailDetectado + " não está na lista de Hosts autorizados.");
+      }
+    })
+    .catch((err) => {
+      console.warn("Popup falhou, tentando redirect:", err.code, err.message);
+      if (
+        err.code === "auth/popup-blocked" ||
+        err.code === "auth/operation-not-supported-in-this-environment"
+      ) {
+        firebase.auth().signInWithRedirect(provider).catch((errRedir) => {
+          alert("Erro ao abrir login Google: " + errRedir.message);
+        });
+      } else if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
+        alert("Erro no login Google (" + err.code + "): " + err.message);
+      }
     });
-  } else {
-    firebase.auth().signInWithPopup(provider)
-      .then((res) => {
-        verificarPermissaoHost(res.user);
-        if (!ehHostAutorizado) {
-          alert("O e-mail " + res.user.email + " não está na lista de Hosts autorizados.");
-        }
-      })
-      .catch((err) => {
-        console.error("Erro no login Google:", err);
-        alert("Erro no login Google: " + err.message);
-      });
-  }
 }
 
 function sairContaGoogleHost() {
@@ -593,6 +624,11 @@ function mouseWheel(event) {
     acumuladorTempo = 0;
     desenharTelaNickname();
   } else if (estadoJogo === "MENU") {
+    if (!authFirebaseInicializado) {
+      inicializarFirebaseHostESincronizacao();
+    } else if (!usuarioGoogleAtual && typeof firebase !== "undefined" && firebase.auth && firebase.auth().currentUser) {
+      verificarPermissaoHost(firebase.auth().currentUser);
+    }
     acumuladorTempo = 0;
     desenharMenu();
   } else if (estadoJogo === "SELECAO_BRAWLER") {
