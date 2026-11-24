@@ -3022,12 +3022,12 @@ function desenharMapMaker() {
   fill(0, 255, 120, 90);
   stroke(0, 255, 120);
   strokeWeight(3);
-  ellipse(editorMapa.spawnX, editorMapa.spawnY, 44, 44);
+  desenharSpawnsMapMaker(editorMapa.modoBase, larg, alt);
   noStroke();
   fill(255);
   textStyle(BOLD);
   textSize(10);
-  text("VOCÊ", editorMapa.spawnX, editorMapa.spawnY);
+  text("SPAWN", editorMapa.spawnX, editorMapa.spawnY);
 
   if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA") {
     let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
