@@ -3475,63 +3475,69 @@ function atualizarJogo() {
     encerrarPartidaComTelaFim("FIM DE JOGO • #" + colocacao + " DE 10", null);
     return;
   } else if (modoSelecionado === "FUTEBRAWL") {
-    if (jogador.respawnTimer <= 0) jogador.respawnTimer = 180;
-    jogador.respawnTimer--;
-    if (jogador.respawnTimer <= 0) {
-      jogador.vida = jogador.vidaMax;
-      jogador.municao = 3;
-      jogador.x = 120;
-      jogador.y = meioY;
+  if (jogador.respawnTimer <= 0) jogador.respawnTimer = 180;
+  jogador.respawnTimer--;
+  if (jogador.respawnTimer <= 0) {
+    jogador.vida = jogador.vidaMax;
+    jogador.municao = 3;
+    if (usandoMapaCustom) {
+      jogador.x = mapaCustom.spawnX;
+      jogador.y = mapaCustom.spawnY;
+    } else {
+      jogador.x = mundoLargura / 2;
+      jogador.y = mundoAltura - 185;
     }
   }
+}
 
-  let alvoCamX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
-  let alvoCamY = constrain(jogador.y - height / 2, 0, mundoAltura - height);
-  camX = lerp(camX, alvoCamX, 0.14);
-  camY = lerp(camY, alvoCamY, 0.14);
+let alvoCamX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
+let alvoCamY = constrain(jogador.y - height / 2, 0, mundoAltura - height);
+camX = lerp(camX, alvoCamX, 0.14);
+camY = lerp(camY, alvoCamY, 0.14);
 
-  for (let a of aliados) {
-    if (a.vida > 0) {
-      if (a.dashTimer <= 0) a.iaFutebrawl(bola, [jogador, ...aliados], inimigos);
-      a.atualizar();
-    } else {
-      if (a.respawnTimer <= 0) a.respawnTimer = 180;
-      a.respawnTimer--;
-      if (a.respawnTimer <= 0) {
-        a.vida = a.vidaMax;
-        a.municao = 3;
-        a.x = 120;
-        a.y = a.zonaPreferidaY || random(180, mundoAltura - 180);
-      }
+for (let a of aliados) {
+  if (a.vida > 0) {
+    if (a.dashTimer <= 0) a.iaFutebrawl(bola, [jogador, ...aliados], inimigos);
+    a.atualizar();
+  } else {
+    if (a.respawnTimer <= 0) a.respawnTimer = 180;
+    a.respawnTimer--;
+    if (a.respawnTimer <= 0) {
+      a.vida = a.vidaMax;
+      a.municao = 3;
+      a.x = a.zonaPreferidaX || random(220, mundoLargura - 220);
+      a.y = mundoAltura - 185;
     }
   }
+}
 
-  for (let i = inimigos.length - 1; i >= 0; i--) {
-    let ini = inimigos[i];
-    if (ini.vida > 0) {
-      if (ini.dashTimer <= 0) {
-        if (modoSelecionado === "COMBATE") {
-          ini.iaCombate(todosBrawlers);
-        } else {
-          ini.iaFutebrawl(bola, inimigos, [jogador, ...aliados]);
-        }
-      }
-      ini.atualizar();
-    } else {
+for (let i = inimigos.length - 1; i >= 0; i--) {
+  let ini = inimigos[i];
+  if (ini.vida > 0) {
+    if (ini.dashTimer <= 0) {
       if (modoSelecionado === "COMBATE") {
-        inimigos.splice(i, 1);
+        ini.iaCombate(todosBrawlers);
       } else {
-        if (ini.respawnTimer <= 0) ini.respawnTimer = 180;
-        ini.respawnTimer--;
-        if (ini.respawnTimer <= 0) {
-          ini.vida = ini.vidaMax;
-          ini.municao = 3;
-          ini.x = mundoLargura - 120;
-          ini.y = ini.zonaPreferidaY || random(180, mundoAltura - 180);
-        }
+        ini.iaFutebrawl(bola, inimigos, [jogador, ...aliados]);
+      }
+    }
+    ini.atualizar();
+  } else {
+    if (modoSelecionado === "COMBATE") {
+      inimigos.splice(i, 1);
+    } else {
+      if (ini.respawnTimer <= 0) ini.respawnTimer = 180;
+      ini.respawnTimer--;
+      if (ini.respawnTimer <= 0) {
+        ini.vida = ini.vidaMax;
+        ini.municao = 3;
+        ini.x = ini.zonaPreferidaX || random(220, mundoLargura - 220);
+        ini.y = 185;
       }
     }
   }
+}
+
 
   for (let i = pocasTerra.length - 1; i >= 0; i--) {
     pocasTerra[i].vida--;
