@@ -533,9 +533,6 @@ function confirmarNickname() {
   estadoJogo = "MENU";
 }
 
-let spawnsEditor = [];
-let spawnArrastandoIndex = -1;
-
 function setup() {
   cnv = createCanvas(850, 600);
   if (document.getElementById("jogo-container")) {
