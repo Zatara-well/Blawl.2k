@@ -678,8 +678,6 @@ function desenharSpawnsMapMaker(modo, larguraMapa, alturaMapa) {
   push();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  let spawnsEditor = [];
-  let spawnArrastandoIndex = -1;
 
   for (let i = 0; i < spawnsEditor.length; i++) {
     let s = spawnsEditor[i];
