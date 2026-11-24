@@ -533,6 +533,9 @@ function confirmarNickname() {
   estadoJogo = "MENU";
 }
 
+let spawnsEditor = [];
+let spawnArrastandoIndex = -1;
+
 function setup() {
   cnv = createCanvas(850, 600);
   if (document.getElementById("jogo-container")) {
@@ -8037,3 +8040,67 @@ function desenharControlesMobile() {
   text("SUPER", joySuper.knobX, joySuper.knobY);
   pop();
 }
+function clicarFerramentaSpawnMapMaker(mx, my, modo, larguraMapa, alturaMapa, apagar = false) {
+  const RAIO_SELECAO = 26;
+
+  // 1. Verifica se clicou em algum spawn já existente (para mover ou apagar)
+  for (let i = spawnsEditor.length - 1; i >= 0; i--) {
+    let s = spawnsEditor[i];
+    if (dist(mx, my, s.x, s.y) <= RAIO_SELECAO) {
+      if (apagar) {
+        spawnsEditor.splice(i, 1);
+      } else {
+        spawnArrastandoIndex = i;
+      }
+      return;
+    }
+  }
+
+  if (apagar) return;
+
+  // 2. Se clicou em área vazia, cria um novo spawn respeitando o limite do modo
+  if (modo === "FUTEBRAWL") {
+    let clicouNoAzul = ehLadoAzul(mx, my, larguraMapa, alturaMapa);
+    let qtdNoLado = spawnsEditor.filter(
+      (s) => ehLadoAzul(s.x, s.y, larguraMapa, alturaMapa) === clicouNoAzul
+    ).length;
+
+    if (qtdNoLado < 3) {
+      spawnsEditor.push({ x: mx, y: my });
+      spawnArrastandoIndex = spawnsEditor.length - 1;
+    }
+  } else if (modo === "COMBATE") {
+    if (spawnsEditor.length < 10) {
+      spawnsEditor.push({ x: mx, y: my });
+      spawnArrastandoIndex = spawnsEditor.length - 1;
+    }
+  }
+}
+
+function arrastarSpawnMapMaker(mx, my, modo, larguraMapa, alturaMapa) {
+  if (spawnArrastandoIndex < 0 || spawnArrastandoIndex >= spawnsEditor.length) return;
+
+  let xClamped = constrain(mx, 25, larguraMapa - 25);
+  let yClamped = constrain(my, 25, alturaMapa - 25);
+
+  if (modo === "FUTEBRAWL") {
+    let ladoDestinoAzul = ehLadoAzul(xClamped, yClamped, larguraMapa, alturaMapa);
+    // Conta quantos outros spawns já estão no lado de destino
+    let outrosNoLadoDestino = spawnsEditor.filter(
+      (s, idx) => idx !== spawnArrastandoIndex && ehLadoAzul(s.x, s.y, larguraMapa, alturaMapa) === ladoDestinoAzul
+    ).length;
+
+    // Só permite atravessar o meio-campo se o outro lado ainda tiver menos de 3 spawns
+    if (outrosNoLadoDestino >= 3) {
+      return;
+    }
+  }
+
+  spawnsEditor[spawnArrastandoIndex].x = xClamped;
+  spawnsEditor[spawnArrastandoIndex].y = yClamped;
+}
+
+function soltarSpawnMapMaker() {
+  spawnArrastandoIndex = -1;
+}
+
