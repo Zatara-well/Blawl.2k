@@ -5590,21 +5590,23 @@ class Brawler {
       let dirX = cos(this.dashAngulo);
       let dirY = sin(this.dashAngulo);
 
-      let nx = this.x + dirX * velDash;
-      if (this.colideObstaculo(nx, this.y) || nx < 32 || nx > mundoLargura - 32) {
-        dirX *= -1;
-        this.dashAngulo = atan2(dirY, dirX);
-      } else {
-        this.x = nx;
-      }
+   let nx = this.x + dirX * velDash;
+   let foraX = modoSelecionado === "FUTEBRAWL" ? circuloForaCampoFutebrawl(nx, this.y, this.raio) : (nx < 32 || nx > mundoLargura - 32);
+   if (this.colideObstaculo(nx, this.y) || foraX) {
+     dirX *= -1;
+     this.dashAngulo = atan2(dirY, dirX);
+   } else {
+     this.x = nx;
+   }
 
-      let ny = this.y + dirY * velDash;
-      if (this.colideObstaculo(this.x, ny) || ny < 65 || ny > mundoAltura - 32) {
-        dirY *= -1;
-        this.dashAngulo = atan2(dirY, dirX);
-      } else {
-        this.y = ny;
-      }
+   let ny = this.y + dirY * velDash;
+   let foraY = modoSelecionado === "FUTEBRAWL" ? circuloForaCampoFutebrawl(this.x, ny, this.raio) : (ny < 65 || ny > mundoAltura - 32);
+   if (this.colideObstaculo(this.x, ny) || foraY) {
+     dirY *= -1;
+     this.dashAngulo = atan2(dirY, dirX);
+   } else {
+     this.y = ny;
+   }
 
       this.angulo = this.dashAngulo;
       this.vxAtual = cos(this.dashAngulo) * velDash;
