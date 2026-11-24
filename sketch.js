@@ -3800,7 +3800,6 @@ function atualizarJogo() {
   }
 
   let todosBrawlers = [jogador, ...aliados, ...inimigos];
-  let meioY = mundoAltura / 2;
 
   if (jogador.vida > 0) {
     if (jogador.dashTimer <= 0) {
