@@ -2738,18 +2738,45 @@ function desenharIntroFutebrawl() {
 // ==========================================
 // TELA DO MAP MAKER (EDITOR DE MAPAS)
 // ==========================================
+function carregarModoNoEditor(modo) {
+  let larg = modo === "COMBATE" ? 2200 : 950;
+  let alt = modo === "COMBATE" ? 2200 : 1550;
+  let oficial = mapasOficiais[modo];
+
+  if (oficial) {
+    editorMapa = {
+      modoBase: modo,
+      spawnX: oficial.spawnX,
+      spawnY: oficial.spawnY,
+      obstaculos: (oficial.obstaculos || []).map((o) => ({ x: o.x, y: o.y, w: o.w, h: o.h })),
+      moitas: (oficial.moitas || []).map((m) => ({ x: m.x, y: m.y, w: m.w, h: m.h }))
+    };
+  } else {
+    editorMapa = {
+      modoBase: modo,
+      spawnX: modo === "COMBATE" ? 400 : larg / 2,
+      spawnY: modo === "COMBATE" ? 400 : alt - 310,
+      obstaculos: modo === "COMBATE" ? obterObstaculosPadraoCombate() : [],
+      moitas: []
+    };
+  }
+
+  camEditorX = constrain(editorMapa.spawnX - width / 2, 0, max(0, larg - width));
+  camEditorY = constrain(editorMapa.spawnY - height / 2, 0, max(0, alt - height));
+}
+
 function abrirMapMaker() {
+  if (!ehHostAutorizado) return;
   carregarMapaCustom();
+  carregarModoNoEditor(modoSelecionado);
   ferramentaEditor = "PAREDE";
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 950;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 1550;
-  camEditorX = constrain(mapaCustom.spawnX - width / 2, 0, max(0, larg - width));
-  camEditorY = constrain(mapaCustom.spawnY - height / 2, 0, max(0, alt - height));
+  mensagemEditor = "";
+  timerMensagemEditor = 0;
   estadoJogo = "MAP_MAKER";
 }
 
 function pontoValidoNoEditor(gx, gy, larg, alt) {
-  if (mapaCustom.modoBase === "COMBATE") {
+  if (editorMapa.modoBase === "COMBATE") {
     return gx >= 50 && gx <= larg - 100 && gy >= 50 && gy <= alt - 100;
   }
 
@@ -2762,11 +2789,35 @@ function pontoValidoNoEditor(gx, gy, larg, alt) {
   return dentroCampoPrincipal || dentroGolCima || dentroGolBaixo;
 }
 
+function aplicarFerramentaNoCelula(gx, gy, larg, alt) {
+  if (!pontoValidoNoEditor(gx, gy, larg, alt)) return;
+
+  if (ferramentaEditor === "PAREDE") {
+    if (editorMapa.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
+    let jaExiste = editorMapa.obstaculos.some((o) => o.x === gx && o.y === gy);
+    let emCimaDoSpawn = dist(gx + 25, gy + 25, editorMapa.spawnX, editorMapa.spawnY) < 42;
+    if (!jaExiste && !emCimaDoSpawn) {
+      editorMapa.moitas = editorMapa.moitas.filter((m) => !(m.x === gx && m.y === gy));
+      editorMapa.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
+    }
+  } else if (ferramentaEditor === "MOITA") {
+    if (editorMapa.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
+    let jaExisteMoita = editorMapa.moitas.some((m) => m.x === gx && m.y === gy);
+    let temParede = editorMapa.obstaculos.some((o) => o.x === gx && o.y === gy);
+    if (!jaExisteMoita && !temParede) {
+      editorMapa.moitas.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
+    }
+  } else if (ferramentaEditor === "APAGAR") {
+    editorMapa.obstaculos = editorMapa.obstaculos.filter((o) => !(o.x === gx && o.y === gy));
+    editorMapa.moitas = editorMapa.moitas.filter((m) => !(m.x === gx && m.y === gy));
+  }
+}
+
 function aplicarFerramentaNoMapa(telaX, telaY) {
   if (telaY <= 54 || telaY >= height - 68) return;
 
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 950;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 1550;
+  let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 950;
+  let alt = editorMapa.modoBase === "COMBATE" ? 2200 : 1550;
   let mundoX = telaX + camEditorX;
   let mundoY = telaY + camEditorY;
 
@@ -2775,49 +2826,32 @@ function aplicarFerramentaNoMapa(telaX, telaY) {
 
   if (!pontoValidoNoEditor(gx, gy, larg, alt)) return;
 
-  if (ferramentaEditor === "PAREDE") {
-    if (mapaCustom.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
-    let jaExiste = mapaCustom.obstaculos.some((o) => o.x === gx && o.y === gy);
-    let emCimaDoSpawn = dist(gx + 25, gy + 25, mapaCustom.spawnX, mapaCustom.spawnY) < 42;
-    if (!jaExiste && !emCimaDoSpawn) {
-      mapaCustom.moitas = mapaCustom.moitas.filter((m) => !(m.x === gx && m.y === gy));
-      mapaCustom.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
-    }
-  } else if (ferramentaEditor === "MOITA") {
-    if (mapaCustom.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
-    let jaExisteMoita = mapaCustom.moitas.some((m) => m.x === gx && m.y === gy);
-    let temParede = mapaCustom.obstaculos.some((o) => o.x === gx && o.y === gy);
-    if (!jaExisteMoita && !temParede) {
-      mapaCustom.moitas.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
-    }
-  } else if (ferramentaEditor === "APAGAR") {
-    for (let i = mapaCustom.obstaculos.length - 1; i >= 0; i--) {
-      let o = mapaCustom.obstaculos[i];
-      if (mundoX >= o.x && mundoX <= o.x + o.w && mundoY >= o.y && mundoY <= o.y + o.h) {
-        mapaCustom.obstaculos.splice(i, 1);
-      }
-    }
-    for (let i = mapaCustom.moitas.length - 1; i >= 0; i--) {
-      let m = mapaCustom.moitas[i];
-      if (mundoX >= m.x && mundoX <= m.x + m.w && mundoY >= m.y && mundoY <= m.y + m.h) {
-        mapaCustom.moitas.splice(i, 1);
-      }
-    }
-  } else if (ferramentaEditor === "SPAWN") {
-    if (mapaCustom.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
-    let colideParede = mapaCustom.obstaculos.some(
+  if (ferramentaEditor === "SPAWN") {
+    if (editorMapa.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
+    let colideParede = editorMapa.obstaculos.some(
       (o) => gx + 25 > o.x && gx + 25 < o.x + o.w && gy + 25 > o.y && gy + 25 < o.y + o.h
     );
     if (!colideParede) {
-      mapaCustom.spawnX = gx + 25;
-      mapaCustom.spawnY = gy + 25;
+      editorMapa.spawnX = gx + 25;
+      editorMapa.spawnY = gy + 25;
+    }
+    return;
+  }
+
+  aplicarFerramentaNoCelula(gx, gy, larg, alt);
+
+  if (espelharMapa) {
+    let gxEspelho = larg - GRADE_EDITOR - gx;
+    let gyEspelho = editorMapa.modoBase === "FUTEBRAWL" ? alt - GRADE_EDITOR - gy : gy;
+    if (gxEspelho !== gx || gyEspelho !== gy) {
+      aplicarFerramentaNoCelula(gxEspelho, gyEspelho, larg, alt);
     }
   }
 }
 
 function desenharMapMaker() {
-  let larg = mapaCustom.modoBase === "COMBATE" ? 2200 : 950;
-  let alt = mapaCustom.modoBase === "COMBATE" ? 2200 : 1550;
+  let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 950;
+  let alt = editorMapa.modoBase === "COMBATE" ? 2200 : 1550;
 
   let velCam = 10;
   if (teclasPressionadas["a"] || teclasPressionadas["ArrowLeft"]) camEditorX -= velCam;
@@ -2835,14 +2869,10 @@ function desenharMapMaker() {
 
   stroke(255, 255, 255, 38);
   strokeWeight(1);
-  for (let x = 0; x <= larg; x += GRADE_EDITOR) {
-    line(x, 0, x, alt);
-  }
-  for (let y = 0; y <= alt; y += GRADE_EDITOR) {
-    line(0, y, larg, y);
-  }
+  for (let x = 0; x <= larg; x += GRADE_EDITOR) line(x, 0, x, alt);
+  for (let y = 0; y <= alt; y += GRADE_EDITOR) line(0, y, larg, y);
 
-  if (mapaCustom.modoBase === "FUTEBRAWL") {
+  if (editorMapa.modoBase === "FUTEBRAWL") {
     let golEsq = larg / 2 - 125;
     let golDir = larg / 2 + 125;
 
@@ -2883,11 +2913,11 @@ function desenharMapMaker() {
     rect(25, 50, larg - 50, alt - 75);
   }
 
-  for (let m of mapaCustom.moitas) {
+  for (let m of editorMapa.moitas) {
     desenharTileMoita(m.x, m.y, m.w, m.h, 255);
   }
 
-  for (let o of mapaCustom.obstaculos) {
+  for (let o of editorMapa.obstaculos) {
     noStroke();
     fill(0, 0, 0, 75);
     rect(o.x + 5, o.y + 6, o.w, o.h, 8);
@@ -2905,12 +2935,12 @@ function desenharMapMaker() {
   fill(0, 255, 120, 90);
   stroke(0, 255, 120);
   strokeWeight(3);
-  ellipse(mapaCustom.spawnX, mapaCustom.spawnY, 44, 44);
+  ellipse(editorMapa.spawnX, editorMapa.spawnY, 44, 44);
   noStroke();
   fill(255);
   textStyle(BOLD);
   textSize(10);
-  text("VOCÊ", mapaCustom.spawnX, mapaCustom.spawnY);
+  text("VOCÊ", editorMapa.spawnX, editorMapa.spawnY);
 
   if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA") {
     let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
@@ -2927,41 +2957,66 @@ function desenharMapMaker() {
 
   pop();
 
+  // BARRA SUPERIOR (alinhada com tratarCliqueCanvas)
   noStroke();
   fill(15, 28, 58, 245);
   rect(0, 0, width, 54);
 
+  // Botão VOLTAR (12..94)
   fill(48, 72, 122);
   stroke(20);
   strokeWeight(2);
-  rect(14, 9, 86, 36, 8);
-  noStroke();
-  fill(255);
-  textSize(13);
-  text("SALVAR", 57, 27);
-
-  fill(255, 215, 0);
-  textSize(17);
-  text("MAP MAKER (" + mapaCustom.obstaculos.length + "B / " + mapaCustom.moitas.length + "M)", width / 2 - 45, 27);
-
-  fill(mapaCustom.modoBase === "COMBATE" ? color(120, 70, 45) : color(38, 95, 165));
-  stroke(255, 215, 0);
-  strokeWeight(2);
-  rect(width - 215, 9, 200, 36, 8);
+  rect(12, 9, 82, 36, 8);
   noStroke();
   fill(255);
   textSize(12);
-  text("BASE: " + mapaCustom.modoBase, width - 115, 27);
+  text("VOLTAR", 53, 27);
 
+  // Botão SALVAR (102..190)
+  fill(40, 165, 85);
+  stroke(20);
+  strokeWeight(2);
+  rect(102, 9, 88, 36, 8);
+  noStroke();
+  fill(255);
+  textSize(12);
+  text("SALVAR", 146, 27);
+
+  // Título central
+  fill(255, 215, 0);
+  textSize(15);
+  text("MAP MAKER (" + editorMapa.obstaculos.length + "B / " + editorMapa.moitas.length + "M)", 368, 27);
+
+  // Botão PADRÃO (545..629)
+  fill(145, 65, 55);
+  stroke(20);
+  strokeWeight(2);
+  rect(545, 9, 84, 36, 8);
+  noStroke();
+  fill(255);
+  textSize(11);
+  text("PADRÃO", 587, 27);
+
+  // Botão BASE: MODO (637..838)
+  fill(editorMapa.modoBase === "COMBATE" ? color(120, 70, 45) : color(38, 95, 165));
+  stroke(255, 215, 0);
+  strokeWeight(2);
+  rect(637, 9, 201, 36, 8);
+  noStroke();
+  fill(255);
+  textSize(12);
+  text("BASE: " + editorMapa.modoBase, 737, 27);
+
+  // BARRA INFERIOR (alinhada com tratarCliqueCanvas)
   fill(15, 28, 58, 245);
   rect(0, height - 68, width, 68);
 
   let ferramentas = [
-    { id: "PAREDE", label: "PAREDE", x: 12, w: 88 },
-    { id: "MOITA", label: "MOITA", x: 106, w: 88 },
-    { id: "APAGAR", label: "APAGAR", x: 200, w: 88 },
-    { id: "SPAWN", label: "SPAWN", x: 294, w: 88 },
-    { id: "CAMERA", label: "CÂMERA", x: 388, w: 88 }
+    { id: "PAREDE", label: "PAREDE", x: 10, w: 78 },
+    { id: "MOITA", label: "MOITA", x: 93, w: 74 },
+    { id: "APAGAR", label: "APAGAR", x: 172, w: 78 },
+    { id: "SPAWN", label: "SPAWN", x: 255, w: 74 },
+    { id: "CAMERA", label: "CÂMERA", x: 334, w: 78 }
   ];
 
   for (let f of ferramentas) {
@@ -2976,23 +3031,51 @@ function desenharMapMaker() {
     text(f.label, f.x + f.w / 2, height - 34);
   }
 
+  // Botão ESPELHAR (417..525)
+  stroke(espelharMapa ? color(0, 255, 130) : color(30));
+  strokeWeight(2.5);
+  fill(espelharMapa ? color(45, 145, 95) : color(38, 52, 82));
+  rect(417, height - 56, 108, 44, 10);
+  noStroke();
+  fill(255);
+  textSize(11);
+  text(espelharMapa ? "ESPELHAR: ON" : "ESPELHAR: OFF", 471, height - 34);
+
+  // Botão LIMPAR (534..620)
   stroke(25);
   strokeWeight(2.5);
   fill(195, 50, 60);
-  rect(510, height - 56, 105, 44, 10);
+  rect(534, height - 56, 86, 44, 10);
   noStroke();
   fill(255);
-  textSize(12);
-  text("LIMPAR", 562, height - 34);
+  textSize(11);
+  text("LIMPAR", 577, height - 34);
 
+  // Botão JOGAR MAPA (628..840)
   stroke(25);
   strokeWeight(2.5);
   fill(255, 205, 15);
-  rect(625, height - 56, 213, 44, 10);
+  rect(628, height - 56, 212, 44, 10);
   noStroke();
   fill(25);
-  textSize(16);
-  text("JOGAR MAPA", 731, height - 34);
+  textSize(15);
+  text("JOGAR MAPA", 734, height - 34);
+
+  // Notificação flutuante ao salvar/restaurar mapa
+  if (timerMensagemEditor > 0 && mensagemEditor !== "") {
+    timerMensagemEditor--;
+    noStroke();
+    fill(10, 18, 36, 230);
+    rect(width / 2 - 210, 66, 420, 36, 10);
+    stroke(0, 255, 130);
+    strokeWeight(2);
+    noFill();
+    rect(width / 2 - 210, 66, 420, 36, 10);
+    noStroke();
+    fill(85, 255, 135);
+    textSize(13);
+    text(mensagemEditor, width / 2, 84);
+  }
 }
 
 function tratarCliqueCanvas(e, toqueX, toqueY) {
@@ -3006,8 +3089,8 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
 
   if (estadoJogo === "NOME_INICIAL") {
     return;
-  } else if (estadoJogo === "MENU") {
-    if (cx > 680 && cx < 828 && cy > 255 && cy < 329) {
+    } else if (estadoJogo === "MENU") {
+    if (ehHostAutorizado && cx > 680 && cx < 828 && cy > 255 && cy < 329) {
       abrirMapMaker();
       return;
     }
