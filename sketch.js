@@ -35,12 +35,13 @@ let ultimoArrastoY = 0;
 
 let mapaCustom = {
   modoBase: "COMBATE", // "COMBATE" ou "FUTEBRAWL"
-  spawnX: 400,
-  spawnY: 400,
+  spawnX: 475,
+  spawnY: 1250,
   obstaculos: [
     { x: 300, y: 300, w: 50, h: 50 },
     { x: 500, y: 300, w: 50, h: 50 }
-  ]
+  ],
+  moitas: []
 };
 
 function carregarMapaCustom() {
@@ -50,9 +51,10 @@ function carregarMapaCustom() {
       let dados = JSON.parse(salvo);
       if (dados && Array.isArray(dados.obstaculos)) {
         mapaCustom.modoBase = dados.modoBase === "FUTEBRAWL" ? "FUTEBRAWL" : "COMBATE";
-        mapaCustom.spawnX = typeof dados.spawnX === "number" ? dados.spawnX : 400;
-        mapaCustom.spawnY = typeof dados.spawnY === "number" ? dados.spawnY : 400;
+        mapaCustom.spawnX = typeof dados.spawnX === "number" ? dados.spawnX : 475;
+        mapaCustom.spawnY = typeof dados.spawnY === "number" ? dados.spawnY : 1250;
         mapaCustom.obstaculos = dados.obstaculos;
+        mapaCustom.moitas = Array.isArray(dados.moitas) ? dados.moitas : [];
       }
     }
   } catch (e) {}
@@ -82,6 +84,7 @@ let pocasTerra = [];
 let ondasCirculares = [];
 let rachadurasChao = [];
 let obstaculos = [];
+let moitas = [];
 let particulas = [];
 let textosFlutuantes = [];
 let confetesGol = [];
