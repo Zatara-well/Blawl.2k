@@ -7624,10 +7624,11 @@ function atualizarKnobJoystick(joy, tx, ty) {
 function mirarInimigoMaisProximoMobile() {
   if (!jogador) return;
   if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === jogador) {
-    let golX = jogador.time === "AZUL" ? mundoLargura - 20 : 20;
-    jogador.angulo = atan2(mundoAltura / 2 - jogador.y, golX - jogador.x);
-    return;
-  }
+  let golY = jogador.time === "AZUL" ? 125 : mundoAltura - 125;
+  jogador.angulo = atan2(golY - jogador.y, mundoLargura / 2 - jogador.x);
+  return;
+}
+  
   let alvo = null;
   let menorD = Infinity;
   for (let ini of inimigos) {
