@@ -5439,16 +5439,21 @@ class Brawler {
     }
   }
 
-  aplicarMovimento(vx, vy) {
+    aplicarMovimento(vx, vy) {
     let distAntesX = this.x;
     let distAntesY = this.y;
 
-    let nx = constrain(this.x + vx, 32, mundoLargura - 32);
-    if (!this.colideObstaculo(nx, this.y)) {
+    let nx = this.x + vx;
+    let bloqueadoX = this.colideObstaculo(nx, this.y) ||
+      (modoSelecionado === "FUTEBRAWL" ? circuloForaCampoFutebrawl(nx, this.y, this.raio) : (nx < 32 || nx > mundoLargura - 32));
+    if (!bloqueadoX) {
       this.x = nx;
     }
-    let ny = constrain(this.y + vy, 65, mundoAltura - 32);
-    if (!this.colideObstaculo(this.x, ny)) {
+
+    let ny = this.y + vy;
+    let bloqueadoY = this.colideObstaculo(this.x, ny) ||
+      (modoSelecionado === "FUTEBRAWL" ? circuloForaCampoFutebrawl(this.x, ny, this.raio) : (ny < 65 || ny > mundoAltura - 32));
+    if (!bloqueadoY) {
       this.y = ny;
     }
 
