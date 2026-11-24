@@ -21,49 +21,201 @@ let btnConfirmarNome = null;
 const CHAVE_STORAGE_NICKNAME = "brawl_stars_2d_nickname_v1";
 
 // ==========================================
-// SISTEMA DE MAP MAKER (CRIADOR DE MAPAS)
+// SISTEMA DE HOST (GMAIL) E MAP MAKER OFICIAL
 // ==========================================
-const CHAVE_STORAGE_MAPA_CUSTOM = "brawl_stars_2d_mapa_custom_v1";
+const EMAILS_HOSTS_AUTORIZADOS = [
+  "seuemail@gmail.com",
+  "teammate1@gmail.com"
+];
+
+let usuarioGoogleAtual = null;
+let ehHostAutorizado = false;
+let authFirebaseInicializado = false;
+
+const CHAVE_STORAGE_MAPAS_OFICIAIS = "brawl_stars_2d_mapas_oficiais_v2";
 const GRADE_EDITOR = 50;
-let usandoMapaCustom = false;
-let ferramentaEditor = "PAREDE"; // "PAREDE", "APAGAR", "SPAWN", "CAMERA"
+let ferramentaEditor = "PAREDE"; // "PAREDE", "MOITA", "APAGAR", "SPAWN", "CAMERA"
+let espelharMapa = false;
+let mensagemEditor = "";
+let timerMensagemEditor = 0;
 let camEditorX = 0;
 let camEditorY = 0;
 let arrastandoCameraEditor = false;
 let ultimoArrastoX = 0;
 let ultimoArrastoY = 0;
 
-let mapaCustom = {
-  modoBase: "COMBATE", // "COMBATE" ou "FUTEBRAWL"
-  spawnX: 475,
-  spawnY: 1250,
-  obstaculos: [
-    { x: 300, y: 300, w: 50, h: 50 },
-    { x: 500, y: 300, w: 50, h: 50 }
-  ],
+// Guarda os mapas oficiais criados pelo Host (null = usa o mapa padrão do jogo)
+let mapasOficiais = {
+  COMBATE: null,
+  FUTEBRAWL: null
+};
+
+// Rascunho ativo enquanto o Host edita no Map Maker
+let editorMapa = {
+  modoBase: "COMBATE",
+  spawnX: 400,
+  spawnY: 400,
+  obstaculos: [],
   moitas: []
 };
 
+function verificarPermissaoHost(user) {
+  usuarioGoogleAtual = user || null;
+  if (user && user.email) {
+    let emailLimpo = user.email.toLowerCase().trim();
+    ehHostAutorizado = EMAILS_HOSTS_AUTORIZADOS.map((e) => e.toLowerCase().trim()).includes(emailLimpo);
+  } else {
+    ehHostAutorizado = false;
+  }
+}
+
+function inicializarFirebaseHostESincronizacao() {
+  if (authFirebaseInicializado || typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
+    return;
+  }
+  authFirebaseInicializado = true;
+
+  try {
+    firebase.auth().onAuthStateChanged((user) => {
+      verificarPermissaoHost(user);
+    });
+
+    // Escuta em tempo real os mapas oficiais publicados pelo Host para TODOS os jogadores
+    firebase.firestore().collection("config_jogo").doc("mapas_oficiais").onSnapshot(
+      (doc) => {
+        if (doc.exists) {
+          let dados = doc.data();
+          if (dados) {
+            mapasOficiais.COMBATE = dados.COMBATE || null;
+            mapasOficiais.FUTEBRAWL = dados.FUTEBRAWL || null;
+            try {
+              window.localStorage.setItem(CHAVE_STORAGE_MAPAS_OFICIAIS, JSON.stringify(mapasOficiais));
+            } catch (e) {}
+          }
+        }
+      },
+      (err) => {
+        console.warn("Aviso ao ler mapas do Firestore:", err);
+      }
+    );
+  } catch (e) {
+    console.warn("Firebase não configurado:", e);
+  }
+}
+
+function entrarComGoogleHost() {
+  if (typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
+    alert("Configure o Firebase no index.html para vincular o Gmail do Host.");
+    return;
+  }
+  let provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  firebase.auth().signInWithPopup(provider)
+    .then((res) => {
+      verificarPermissaoHost(res.user);
+      if (!ehHostAutorizado) {
+        alert("O e-mail " + res.user.email + " não está na lista de Hosts autorizados.");
+      }
+    })
+    .catch((err) => {
+      console.error("Erro no login Google:", err);
+    });
+}
+
+function sairContaGoogleHost() {
+  if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().signOut().then(() => {
+      verificarPermissaoHost(null);
+    });
+  }
+}
+
+function obterObstaculosPadraoCombate() {
+  return [
+    { x: 430, y: 420, w: 90, h: 90 },
+    { x: 1680, y: 420, w: 90, h: 90 },
+    { x: 430, y: 1690, w: 90, h: 90 },
+    { x: 1680, y: 1690, w: 90, h: 90 },
+    { x: 1055, y: 340, w: 90, h: 65 },
+    { x: 1055, y: 1795, w: 90, h: 65 },
+    { x: 340, y: 1055, w: 65, h: 90 },
+    { x: 1795, y: 1055, w: 65, h: 90 },
+    { x: 730, y: 720, w: 85, h: 85 },
+    { x: 1385, y: 720, w: 85, h: 85 },
+    { x: 730, y: 1395, w: 85, h: 85 },
+    { x: 1385, y: 1395, w: 85, h: 85 },
+    { x: 1060, y: 860, w: 80, h: 50 },
+    { x: 1060, y: 1290, w: 80, h: 50 },
+    { x: 860, y: 1060, w: 50, h: 80 },
+    { x: 1290, y: 1060, w: 50, h: 80 }
+  ];
+}
+
 function carregarMapaCustom() {
   try {
-    let salvo = window.localStorage.getItem(CHAVE_STORAGE_MAPA_CUSTOM);
+    let salvo = window.localStorage.getItem(CHAVE_STORAGE_MAPAS_OFICIAIS);
     if (salvo) {
       let dados = JSON.parse(salvo);
-      if (dados && Array.isArray(dados.obstaculos)) {
-        mapaCustom.modoBase = dados.modoBase === "FUTEBRAWL" ? "FUTEBRAWL" : "COMBATE";
-        mapaCustom.spawnX = typeof dados.spawnX === "number" ? dados.spawnX : 475;
-        mapaCustom.spawnY = typeof dados.spawnY === "number" ? dados.spawnY : 1250;
-        mapaCustom.obstaculos = dados.obstaculos;
-        mapaCustom.moitas = Array.isArray(dados.moitas) ? dados.moitas : [];
+      if (dados) {
+        mapasOficiais.COMBATE = dados.COMBATE || null;
+        mapasOficiais.FUTEBRAWL = dados.FUTEBRAWL || null;
       }
     }
   } catch (e) {}
+  inicializarFirebaseHostESincronizacao();
 }
 
-function salvarMapaCustom() {
+function salvarMapaCustom(publicarNaNuvem = true) {
+  if (!ehHostAutorizado) return;
+
+  let copiaMapa = {
+    modoBase: editorMapa.modoBase,
+    spawnX: editorMapa.spawnX,
+    spawnY: editorMapa.spawnY,
+    obstaculos: editorMapa.obstaculos.map((o) => ({ x: o.x, y: o.y, w: o.w, h: o.h })),
+    moitas: editorMapa.moitas.map((m) => ({ x: m.x, y: m.y, w: m.w, h: m.h }))
+  };
+
+  mapasOficiais[editorMapa.modoBase] = copiaMapa;
+
   try {
-    window.localStorage.setItem(CHAVE_STORAGE_MAPA_CUSTOM, JSON.stringify(mapaCustom));
+    window.localStorage.setItem(CHAVE_STORAGE_MAPAS_OFICIAIS, JSON.stringify(mapasOficiais));
   } catch (e) {}
+
+  if (publicarNaNuvem && typeof firebase !== "undefined" && firebase.firestore) {
+    firebase.firestore().collection("config_jogo").doc("mapas_oficiais").set(
+      { [editorMapa.modoBase]: copiaMapa },
+      { merge: true }
+    ).then(() => {
+      mensagemEditor = "MAPA OFICIAL PUBLICADO PARA TODOS!";
+      timerMensagemEditor = 120;
+    }).catch((err) => {
+      console.error("Erro ao publicar mapa:", err);
+      mensagemEditor = "SALVO LOCALMENTE (VERIFIQUE REGRAS FIREBASE)";
+      timerMensagemEditor = 150;
+    });
+  } else {
+    mensagemEditor = "MAPA SALVO!";
+    timerMensagemEditor = 90;
+  }
+}
+
+function restaurarMapaPadraoDoModo(modo) {
+  if (!ehHostAutorizado) return;
+  mapasOficiais[modo] = null;
+  try {
+    window.localStorage.setItem(CHAVE_STORAGE_MAPAS_OFICIAIS, JSON.stringify(mapasOficiais));
+  } catch (e) {}
+
+  if (typeof firebase !== "undefined" && firebase.firestore) {
+    firebase.firestore().collection("config_jogo").doc("mapas_oficiais").set(
+      { [modo]: null },
+      { merge: true }
+    );
+  }
+  carregarModoNoEditor(modo);
+  mensagemEditor = "MAPA PADRÃO RESTAURADO!";
+  timerMensagemEditor = 110;
 }
 
 let mundoLargura = 2200;
