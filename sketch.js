@@ -4075,6 +4075,19 @@ function desenharJogo() {
     fill(35, 165, 255);
     ellipse(golEsq, mundoAltura - 135, 22, 22);
     ellipse(golDir, mundoAltura - 135, 22, 22);
+  } else {
+    stroke(255, 255, 255, 28);
+    strokeWeight(1);
+    for (let x = 0; x <= mundoLargura; x += 100) {
+      line(x, 0, x, mundoAltura);
+    }
+    for (let y = 0; y <= mundoAltura; y += 100) {
+      line(0, y, mundoLargura, y);
+    }
+    noFill();
+    stroke(255, 220, 60, 180);
+    strokeWeight(5);
+    rect(25, 50, mundoLargura - 50, mundoAltura - 75);
   }
 
   for (let rc of rachadurasChao) {
