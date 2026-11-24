@@ -3640,6 +3640,20 @@ for (let i = inimigos.length - 1; i >= 0; i--) {
     atualizarBola();
   }
 }
+function circuloForaCampoFutebrawl(cx, cy, raio) {
+  let golEsq = mundoLargura / 2 - 125;
+  let golDir = mundoLargura / 2 + 125;
+
+  if (cx < 50 + raio || cx > mundoLargura - 50 - raio) return true;
+
+  let dentroLarguraGol = cx >= golEsq + raio && cx <= golDir - raio;
+  if (dentroLarguraGol) {
+    if (cy < 35 + raio || cy > mundoAltura - 35 - raio) return true;
+  } else {
+    if (cy < 135 + raio || cy > mundoAltura - 135 - raio) return true;
+  }
+  return false;
+}
 
 function lancaBolaComAlcance(chutador, angulo, alcance, velInicial, ehSuper) {
   if (!bola) return;
@@ -3651,19 +3665,18 @@ function lancaBolaComAlcance(chutador, angulo, alcance, velInicial, ehSuper) {
   bola.alcanceMax = alcance;
   bola.alcanceRestante = alcance;
   bola.velInicial = velInicial;
-  bola.x = constrain(chutador.x + cos(angulo) * (chutador.raio + bola.raio + 6), 25 + bola.raio, mundoLargura - 25 - bola.raio);
-  bola.y = constrain(chutador.y + sin(angulo) * (chutador.raio + bola.raio + 6), 52 + bola.raio, mundoAltura - 25 - bola.raio);
+  bola.x = constrain(chutador.x + cos(angulo) * (chutador.raio + bola.raio + 6), 50 + bola.raio, mundoLargura - 50 - bola.raio);
+  bola.y = constrain(chutador.y + sin(angulo) * (chutador.raio + bola.raio + 6), 135 + bola.raio, mundoAltura - 135 - bola.raio);
   bola.vx = cos(angulo) * velInicial;
   bola.vy = sin(angulo) * velInicial;
 }
 
 function calcularTrajetoriaSimulada(origemX, origemY, angulo, alcance, raioObj, ignoraGol) {
-  let meioY = mundoAltura / 2;
-  let golTop = meioY - 105;
-  let golBottom = meioY + 105;
+  let golEsq = mundoLargura / 2 - 125;
+  let golDir = mundoLargura / 2 + 125;
 
-  let simX = constrain(origemX, 25 + raioObj, mundoLargura - 25 - raioObj);
-  let simY = constrain(origemY, 52 + raioObj, mundoAltura - 25 - raioObj);
+  let simX = constrain(origemX, 50 + raioObj, mundoLargura - 50 - raioObj);
+  let simY = constrain(origemY, 135 + raioObj, mundoAltura - 135 - raioObj);
   let dirX = cos(angulo);
   let dirY = sin(angulo);
 
@@ -3679,10 +3692,10 @@ function calcularTrajetoriaSimulada(origemX, origemY, angulo, alcance, raioObj, 
     let bateuNestePasso = false;
 
     let nx = simX + dirX * avanco;
-    if (circuloColideObstaculo(nx, simY, raioObj)) {
+    if (circuloColideObstaculo(nx, simY, raioObj) || (modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(nx, simY, raioObj))) {
       dirX *= -1;
       bateuNestePasso = true;
-    } else if ((nx < 25 + raioObj || nx > mundoLargura - 25 - raioObj) && (ignoraGol || simY < golTop || simY > golBottom)) {
+    } else if (modoSelecionado !== "FUTEBRAWL" && (nx < 25 + raioObj || nx > mundoLargura - 25 - raioObj)) {
       nx = constrain(nx, 25 + raioObj, mundoLargura - 25 - raioObj);
       dirX *= -1;
       simX = nx;
@@ -3692,10 +3705,18 @@ function calcularTrajetoriaSimulada(origemX, origemY, angulo, alcance, raioObj, 
     }
 
     let ny = simY + dirY * avanco;
-    if (circuloColideObstaculo(simX, ny, raioObj)) {
+    let entrouNoGol = !ignoraGol && modoSelecionado === "FUTEBRAWL" &&
+      simX >= golEsq + raioObj && simX <= golDir - raioObj &&
+      (ny <= 135 || ny >= mundoAltura - 135);
+
+    if (entrouNoGol) {
+      simY = ny;
+      pontos.push({ x: simX, y: simY });
+      break;
+    } else if (circuloColideObstaculo(simX, ny, raioObj) || (modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(simX, ny, raioObj))) {
       dirY *= -1;
       bateuNestePasso = true;
-    } else if (ny < 52 + raioObj || ny > mundoAltura - 25 - raioObj) {
+    } else if (modoSelecionado !== "FUTEBRAWL" && (ny < 52 + raioObj || ny > mundoAltura - 25 - raioObj)) {
       ny = constrain(ny, 52 + raioObj, mundoAltura - 25 - raioObj);
       dirY *= -1;
       simY = ny;
@@ -3709,10 +3730,6 @@ function calcularTrajetoriaSimulada(origemX, origemY, angulo, alcance, raioObj, 
       ricochetes.push({ x: simX, y: simY });
     }
 
-    if (!ignoraGol && (simX <= 22 || simX >= mundoLargura - 22) && simY > golTop && simY < golBottom) {
-      break;
-    }
-
     restante -= avanco;
   }
 
@@ -3720,32 +3737,10 @@ function calcularTrajetoriaSimulada(origemX, origemY, angulo, alcance, raioObj, 
   return { pontos: pontos, ricochetes: ricochetes };
 }
 
-function calcularTrajetoriaBola(chutador, angulo, alcance) {
-  let raioBola = bola ? bola.raio : 15;
-  let ox = chutador.x + cos(angulo) * (chutador.raio + raioBola + 6);
-  let oy = chutador.y + sin(angulo) * (chutador.raio + raioBola + 6);
-  return calcularTrajetoriaSimulada(ox, oy, angulo, alcance, raioBola, false);
-}
-
-function criarFaiscasRicochete(bx, by, ehSuper) {
-  for (let k = 0; k < (ehSuper ? 8 : 4); k++) {
-    particulas.push({
-      x: bx,
-      y: by,
-      vx: random(-3, 3),
-      vy: random(-3, 3),
-      tam: random(4, 8),
-      cor: ehSuper ? color(255, 220, 50, 230) : color(255, 255, 255, 180),
-      vida: 12
-    });
-  }
-}
-
 function atualizarBola() {
   if (!bola) return;
-  let meioY = mundoAltura / 2;
-  let golTop = meioY - 105;
-  let golBottom = meioY + 105;
+  let golEsq = mundoLargura / 2 - 125;
+  let golDir = mundoLargura / 2 + 125;
 
   if (bola.cooldownChute > 0) {
     bola.cooldownChute--;
@@ -3761,7 +3756,8 @@ function atualizarBola() {
     let velConducao = sqrt(bola.posse.vxAtual * bola.posse.vxAtual + bola.posse.vyAtual * bola.posse.vyAtual);
     bola.rotacao += velConducao * 0.08;
 
-    if (!bolaColideObstaculo(alvoX, alvoY)) {
+    let dentroGolConducao = alvoX >= golEsq + bola.raio && alvoX <= golDir - bola.raio && (alvoY < 135 || alvoY > mundoAltura - 135);
+    if (!bolaColideObstaculo(alvoX, alvoY) && (!circuloForaCampoFutebrawl(alvoX, alvoY, bola.raio) || dentroGolConducao)) {
       bola.x = alvoX;
       bola.y = alvoY;
     } else {
@@ -3791,30 +3787,19 @@ function atualizarBola() {
 
       for (let s = 0; s < subPassos; s++) {
         let nx = bola.x + dxSub;
-        if (bolaColideObstaculo(nx, bola.y)) {
+        if (bolaColideObstaculo(nx, bola.y) || circuloForaCampoFutebrawl(nx, bola.y, bola.raio)) {
           dxSub *= -1;
           bola.vx *= -1;
-          criarFaiscasRicochete(bola.x, bola.y, bola.superChuteAtivo);
-        } else if ((nx < 25 + bola.raio || nx > mundoLargura - 25 - bola.raio) && (bola.y < golTop || bola.y > golBottom)) {
-          nx = constrain(nx, 25 + bola.raio, mundoLargura - 25 - bola.raio);
-          dxSub *= -1;
-          bola.vx *= -1;
-          bola.x = nx;
           criarFaiscasRicochete(bola.x, bola.y, bola.superChuteAtivo);
         } else {
           bola.x = nx;
         }
 
         let ny = bola.y + dySub;
-        if (bolaColideObstaculo(bola.x, ny)) {
+        let naBocaDoGol = bola.x >= golEsq + bola.raio && bola.x <= golDir - bola.raio;
+        if (bolaColideObstaculo(bola.x, ny) || (!naBocaDoGol && circuloForaCampoFutebrawl(bola.x, ny, bola.raio))) {
           dySub *= -1;
           bola.vy *= -1;
-          criarFaiscasRicochete(bola.x, bola.y, bola.superChuteAtivo);
-        } else if (ny < 52 + bola.raio || ny > mundoAltura - 25 - bola.raio) {
-          ny = constrain(ny, 52 + bola.raio, mundoAltura - 25 - bola.raio);
-          dySub *= -1;
-          bola.vy *= -1;
-          bola.y = ny;
           criarFaiscasRicochete(bola.x, bola.y, bola.superChuteAtivo);
         } else {
           bola.y = ny;
@@ -3877,14 +3862,14 @@ function atualizarBola() {
     if (bola.rastro[i].vida <= 0) bola.rastro.splice(i, 1);
   }
 
-  if (bola.x < 25 && bola.y > golTop && bola.y < golBottom) {
-    placarVermelho++;
-    let autor = (bola.ultimoTocador && bola.ultimoTocador.time === "VERMELHO") ? bola.ultimoTocador : inimigos[0];
-    iniciarCelebracaoGol("VERMELHO", 22, bola.y, autor);
-  } else if (bola.x > mundoLargura - 25 && bola.y > golTop && bola.y < golBottom) {
+  if (bola.y < 135 && bola.x > golEsq && bola.x < golDir) {
     placarAzul++;
     let autor = (bola.ultimoTocador && bola.ultimoTocador.time === "AZUL") ? bola.ultimoTocador : jogador;
-    iniciarCelebracaoGol("AZUL", mundoLargura - 22, bola.y, autor);
+    iniciarCelebracaoGol("AZUL", bola.x, 110, autor);
+  } else if (bola.y > mundoAltura - 135 && bola.x > golEsq && bola.x < golDir) {
+    placarVermelho++;
+    let autor = (bola.ultimoTocador && bola.ultimoTocador.time === "VERMELHO") ? bola.ultimoTocador : inimigos[0];
+    iniciarCelebracaoGol("VERMELHO", bola.x, mundoAltura - 110, autor);
   }
 }
 
