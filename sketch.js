@@ -3373,17 +3373,19 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
   obstaculos = [];
   moitas = [];
 
-  if (usandoMapaCustom) {
-    for (let o of mapaCustom.obstaculos) {
+  let mapaFuteHost = mapasOficiais.FUTEBRAWL;
+
+  if (mapaFuteHost) {
+    for (let o of (mapaFuteHost.obstaculos || [])) {
       obstaculos.push(new Obstaculo(o.x, o.y, o.w, o.h));
     }
-    for (let m of mapaCustom.moitas) {
+    for (let m of (mapaFuteHost.moitas || [])) {
       moitas.push({ x: m.x, y: m.y, w: m.w, h: m.h });
     }
   }
 
-  let spawnJogadorX = usandoMapaCustom ? mapaCustom.spawnX : meioX;
-  let spawnJogadorY = usandoMapaCustom ? mapaCustom.spawnY : mundoAltura - 310;
+  let spawnJogadorX = mapaFuteHost ? mapaFuteHost.spawnX : meioX;
+  let spawnJogadorY = mapaFuteHost ? mapaFuteHost.spawnY : mundoAltura - 310;
 
   if (sortearBots) {
     let poolDisponivel = DADOS_BRAWLERS.map((b) => b.id).filter((id) => id !== personagemSelecionado);
