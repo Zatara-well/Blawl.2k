@@ -3345,7 +3345,7 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
     camEditorY -= mouseY - ultimoArrastoY;
     ultimoArrastoX = mouseX;
     ultimoArrastoY = mouseY;
-  } else {
+  } else if (ferramentaEditor !== "SPAWN") {
     aplicarFerramentaNoMapa(mouseX, mouseY);
   }
 }
