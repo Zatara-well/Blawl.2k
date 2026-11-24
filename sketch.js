@@ -3114,12 +3114,23 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
 
   if (estadoJogo === "NOME_INICIAL") {
     return;
-    } else if (estadoJogo === "MENU") {
+      } else if (estadoJogo === "MENU") {
+    if (ehBotaoDireito) return;
+
+    // Clique/Toque no botão LOGIN HOST (GMAIL) / SAIR
+    if (cx >= width - 178 && cx <= width - 14 && cy >= 62 && cy <= 96) {
+      if (usuarioGoogleAtual) {
+        sairContaGoogleHost();
+      } else {
+        entrarComGoogleHost();
+      }
+      return;
+    }
+
     if (ehHostAutorizado && cx > 680 && cx < 828 && cy > 255 && cy < 329) {
       abrirMapMaker();
       return;
     }
-    if (ehBotaoDireito) return;
     if (cx >= 14 && cx <= 214 && cy >= 8 && cy <= 46) {
       mostrarFormularioNickname(true);
       return;
@@ -3137,6 +3148,7 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
       iniciarPartida();
       return;
     }
+  
   } else if (estadoJogo === "SELECAO_BRAWLER") {
     if (ehBotaoDireito) return;
     if (cx >= 16 && cx <= 74 && cy >= 12 && cy <= 52) {
