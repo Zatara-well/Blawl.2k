@@ -3307,10 +3307,11 @@ function iniciarPartida() {
     ];
 
     let spawnsEmbaralhados = shuffle(pontosSpawn);
-        jogador = new Brawler(spawnsEmbaralhados[0].x, spawnsEmbaralhados[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
-    if (usandoMapaCustom) {
-      jogador.x = mapaCustom.spawnX;
-      jogador.y = mapaCustom.spawnY;
+    let mapaCombateHost = mapasOficiais.COMBATE;
+    jogador = new Brawler(spawnsEmbaralhados[0].x, spawnsEmbaralhados[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
+    if (mapaCombateHost) {
+      jogador.x = mapaCombateHost.spawnX;
+      jogador.y = mapaCombateHost.spawnY;
     }
     registrarParticipantePartida(jogador);
 
@@ -3323,33 +3324,17 @@ function iniciarPartida() {
       registrarParticipantePartida(bot);
     }
 
-    if (usandoMapaCustom) {
-      for (let o of mapaCustom.obstaculos) {
+    if (mapaCombateHost) {
+      for (let o of (mapaCombateHost.obstaculos || [])) {
         obstaculos.push(new Obstaculo(o.x, o.y, o.w, o.h));
       }
-      for (let m of mapaCustom.moitas) {
-  moitas.push({ x: m.x, y: m.y, w: m.w, h: m.h });
+      for (let m of (mapaCombateHost.moitas || [])) {
+        moitas.push({ x: m.x, y: m.y, w: m.w, h: m.h });
       }
     } else {
-      obstaculos.push(new Obstaculo(430, 420, 90, 90));
-      obstaculos.push(new Obstaculo(1680, 420, 90, 90));
-      obstaculos.push(new Obstaculo(430, 1690, 90, 90));
-      obstaculos.push(new Obstaculo(1680, 1690, 90, 90));
-
-      obstaculos.push(new Obstaculo(1055, 340, 90, 65));
-      obstaculos.push(new Obstaculo(1055, 1795, 90, 65));
-      obstaculos.push(new Obstaculo(340, 1055, 65, 90));
-      obstaculos.push(new Obstaculo(1795, 1055, 65, 90));
-
-      obstaculos.push(new Obstaculo(730, 720, 85, 85));
-      obstaculos.push(new Obstaculo(1385, 720, 85, 85));
-      obstaculos.push(new Obstaculo(730, 1395, 85, 85));
-      obstaculos.push(new Obstaculo(1385, 1395, 85, 85));
-
-      obstaculos.push(new Obstaculo(1060, 860, 80, 50));
-      obstaculos.push(new Obstaculo(1060, 1290, 80, 50));
-      obstaculos.push(new Obstaculo(860, 1060, 50, 80));
-      obstaculos.push(new Obstaculo(1290, 1060, 50, 80));
+      for (let o of obterObstaculosPadraoCombate()) {
+        obstaculos.push(new Obstaculo(o.x, o.y, o.w, o.h));
+      }
     }
 
     camX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
