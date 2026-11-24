@@ -53,8 +53,7 @@ let mapasOficiais = {
 // Rascunho ativo enquanto o Host edita no Map Maker
 let editorMapa = {
   modoBase: "COMBATE",
-  spawnX: 400,
-  spawnY: 400,
+  spawns: [],
   obstaculos: [],
   moitas: []
 };
