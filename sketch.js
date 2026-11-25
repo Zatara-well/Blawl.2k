@@ -5822,7 +5822,6 @@ class Brawler {
 
       this.furia = 0;
       this.dashTimer = 0;
-      this.alvoEnganchadoTrunk = null;
       this.delayAtaqueTrunk = 0;
       this.giroTrunk = 0;
       this.filaDisparosColt = [];
@@ -6392,6 +6391,11 @@ class Brawler {
   podeAtirarTaticamente(alvo, distancia, alcanceMax, bolaObj = null) {
     if (this.municao < 1) return false;
 
+    // Brawlers de curto alcance (Ash e Trunk) gastam todas as munições para finalizar rápido
+    if ((this.tipo === "ASH" || this.tipo === "TRUNK") && distancia <= alcanceMax) {
+      return true;
+    }
+
     // 1. OCASIÃO DE TUDO OU NADA (pode gastar até a última munição):
     let alvoQuaseMorrendo = alvo.vida <= this.calcularDanoAtual() * 2.5 || alvo.vida < alvo.vidaMax * 0.35;
     let inimigoMuitoPerto = distancia <= alcanceMax * 0.55;
@@ -6410,8 +6414,164 @@ class Brawler {
     // 3. TROCA NORMAL (média distância): atira, mas sempre guarda 1 munição de reserva
     return this.municao >= 2;
   }
-  
-    obterPosicaoCoberturaBarley(alvo, verificarVeneno = false) {
+
+  // Mira preditiva com leve imprecisão humana para o Colt não ficar apelão
+  calcularAlvoPreditivoColt(alvo, ehSuper = false) {
+    let velBala = ehSuper ? 13.5 : 11.5;
+    let dInicial = dist(this.x, this.y, alvo.x, alvo.y);
+    let tempoVoo = dInicial / velBala;
+
+    // Fator de antecipação parcial (72% a 92%) para parecer humano
+    let fatorAntecipacao = random(0.72, 0.92);
+    let predX = alvo.x + (alvo.vxAtual || 0) * tempoVoo * fatorAntecipacao;
+    let predY = alvo.y + (alvo.vyAtual || 0) * tempoVoo * fatorAntecipacao;
+
+    let angPreditivo = atan2(predY - this.y, predX - this.x);
+    // Pequeno desvio angular humano (evita precisão robótica 100%)
+    let erroHumano = ehSuper ? random(-0.11, 0.11) : random(-0.14, 0.14);
+
+    return angPreditivo + erroHumano;
+  }
+
+  // Calcula vetor de desvio lateral quando há projéteis ou garrafas vindo na direção do bot
+  calcularVetorDesvioProjeteis() {
+    let esquivaX = 0;
+    let esquivaY = 0;
+
+    for (let p of projeteis) {
+      if (p.time !== this.time && p.vida > 0) {
+        let d = dist(this.x, this.y, p.x, p.y);
+        if (d < 190) {
+          let angParaMim = atan2(this.y - p.y, this.x - p.x);
+          let diff = atan2(sin(angParaMim - p.angulo), cos(angParaMim - p.angulo));
+          if (abs(diff) < 0.65) {
+            let lado = diff >= 0 ? 1 : -1;
+            let angPerp = p.angulo + lado * HALF_PI;
+            let peso = map(d, 20, 190, 1.5, 0.4);
+            esquivaX += cos(angPerp) * peso;
+            esquivaY += sin(angPerp) * peso;
+          }
+        }
+      }
+    }
+
+    for (let gf of garrafas) {
+      if (gf.time !== this.time && !gf.finalizada) {
+        let d = dist(this.x, this.y, gf.xAlvo, gf.yAlvo);
+        if (d < 95) {
+          let angFuga = atan2(this.y - gf.yAlvo, this.x - gf.xAlvo);
+          esquivaX += cos(angFuga) * 1.2;
+          esquivaY += sin(angFuga) * 1.2;
+        }
+      }
+    }
+
+    return { x: esquivaX, y: esquivaY };
+  }
+
+  // Busca uma poça de terra aliada próxima para o Trunk ganhar +velocidade e +dano
+  obterPocaTerraEstrategica(alvo) {
+    if (this.tipo !== "TRUNK") return null;
+    let melhorPoca = null;
+    let menorCusto = Infinity;
+
+    for (let pt of pocasTerra) {
+      if (pt.time === this.time && pt.vida > 90) {
+        let distMim = dist(this.x, this.y, pt.x, pt.y);
+        if (distMim > pt.raio * 0.6 && distMim < 220) {
+          let distAlvo = alvo ? dist(pt.x, pt.y, alvo.x, alvo.y) : 0;
+          let custo = distMim + distAlvo * 0.45;
+          if (custo < menorCusto) {
+            menorCusto = custo;
+            melhorPoca = pt;
+          }
+        }
+      }
+    }
+    return melhorPoca;
+  }
+
+  // Aproximação inteligente para brawlers de curto alcance (Ash e Trunk) desviando de tiros
+  aproximarCurtoAlcance(alvo, menorDist) {
+    let angAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
+    let velAtual = this.calcularVelocidadeAtual();
+
+    // 1. Trunk busca pisar em poças de terra próximas para correr mais rápido e bater mais forte
+    if (this.tipo === "TRUNK" && !this.estaNaTerraTrunk() && menorDist > 115) {
+      let poca = this.obterPocaTerraEstrategica(alvo);
+      if (poca) {
+        this.navegarPara(poca.x, poca.y, 1.0);
+        return;
+      }
+    }
+
+    // 2. Se já está preparando o ataque do Trunk, continua avançando para cravar o golpe crítico
+    if (this.tipo === "TRUNK" && this.delayAtaqueTrunk > 0) {
+      let distIdealCritico = 88;
+      if (menorDist > distIdealCritico) {
+        this.navegarPara(alvo.x, alvo.y, 1.0);
+      } else {
+        let angStrafe = angAlvo + HALF_PI * this.ladoContornoBot;
+        this.navegarPara(this.x + cos(angStrafe) * 60, this.y + sin(angStrafe) * 60, 0.7);
+      }
+      return;
+    }
+
+    // 3. Desvio ativo de projéteis enquanto fecha distância
+    let esquiva = this.calcularVetorDesvioProjeteis();
+    let dirX = cos(angAlvo);
+    let dirY = sin(angAlvo);
+
+    if (esquiva.x !== 0 || esquiva.y !== 0) {
+      dirX = dirX * 0.75 + esquiva.x * 0.95;
+      dirY = dirY * 0.75 + esquiva.y * 0.95;
+    } else if (menorDist > 125 && menorDist < 360) {
+      // Zigue-zague sutil contra atiradores de longa distância
+      let oscilacao = sin(frameCount * 0.14 + this.raio) * 0.42;
+      let angZigue = angAlvo + oscilacao;
+      dirX = cos(angZigue);
+      dirY = sin(angZigue);
+    }
+
+    let angFinal = atan2(dirY, dirX);
+    let destinoX = this.x + cos(angFinal) * 120;
+    let destinoY = this.y + sin(angFinal) * 120;
+
+    // Mantém a distância ideal do golpe (Trunk bate melhor na borda externa ~85px; Ash bem colado ~75px)
+    let distanciaParada = this.tipo === "TRUNK" ? 82 : 70;
+    if (menorDist > distanciaParada) {
+      this.navegarPara(destinoX, destinoY, 1.0);
+    } else {
+      let angStrafe = angAlvo + HALF_PI * this.ladoContornoBot;
+      this.navegarPara(this.x + cos(angStrafe) * 70, this.y + sin(angStrafe) * 70, 0.85);
+    }
+  }
+
+  // Verifica se o Trunk deve iniciar o ataque antecipado considerando o delay de 30 frames (0.5s)
+  trunkDevePréAtacar(alvo, menorDist) {
+    if (this.tipo !== "TRUNK") return false;
+    if (this.municao < 1 || this.cooldownAtaque > 0 || this.delayAtaqueTrunk > 0) return false;
+
+    // Já está dentro do raio de dano
+    if (menorDist <= 112) return true;
+
+    // Calcula onde o Trunk e o alvo estarão daqui a 30 frames (tempo do delay do ataque)
+    let velTrunk = this.calcularVelocidadeAtual();
+    let angParaAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
+
+    let futTrunkX = this.x + cos(angParaAlvo) * (velTrunk * 28);
+    let futTrunkY = this.y + sin(angParaAlvo) * (velTrunk * 28);
+
+    let futAlvoX = alvo.x + (alvo.vxAtual || 0) * 24;
+    let futAlvoY = alvo.y + (alvo.vyAtual || 0) * 24;
+
+    let distFutura = dist(futTrunkX, futTrunkY, futAlvoX, futAlvoY);
+
+    // Inicia o ataque antes de encostar para o golpe estourar exatamente na borda crítica (75..112px)
+    return distFutura <= 108 && menorDist <= 185;
+  }
+
+  obterPosicaoCoberturaBarley(alvo, verificarVeneno = false) {
     let melhorPonto = null;
     let menorDistParaMim = Infinity;
     let centroX = mundoLargura / 2;
@@ -6452,11 +6612,9 @@ class Brawler {
     let angAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
     let angParaMim = angAlvo + PI;
 
-    // Verifica se o inimigo está realmente vindo na direção do Barley
     let velAproximacao = (alvo.vxAtual || 0) * cos(angParaMim) + (alvo.vyAtual || 0) * sin(angParaMim);
     let inimigoPerseguindo = velAproximacao > 0.45;
 
-    // 1. Procura se proteger atrás das paredes (se o inimigo não estiver colado em cima)
     if (menorDist >= 130) {
       let cobertura = this.obterPosicaoCoberturaBarley(alvo, verificarVeneno);
       if (cobertura) {
@@ -6476,7 +6634,6 @@ class Brawler {
       }
     }
 
-    // 2. Recuo suave e curvo se o inimigo chegar perto ou vier perseguindo
     if (menorDist < 195 || (menorDist < 230 && inimigoPerseguindo)) {
       let fatorPerigo = constrain(map(menorDist, 100, 230, 1.0, 0.3), 0.3, 1.0);
       let pertoBorda = this.x < 85 || this.x > mundoLargura - 85 || this.y < 105 || this.y > mundoAltura - 85;
@@ -6495,7 +6652,6 @@ class Brawler {
       return;
     }
 
-    // 3. Se o inimigo parou de perseguir ou está longe, avança suavemente até o alcance ideal (245)
     if (menorDist > alcanceIdeal) {
       let angMov = this.navegarPara(alvo.x, alvo.y, 0.82);
       this.angulo = lerp(angMov, angAlvo, 0.75);
@@ -6529,61 +6685,40 @@ class Brawler {
       return;
     }
 
-    let alcanceIdeal = this.tipo === "COLT" ? 260 : (this.tipo === "BARLEY" ? 225 : 95);
-    
+    let ehCurtoAlcance = this.tipo === "ASH" || this.tipo === "TRUNK";
+    let alcanceIdeal = this.tipo === "COLT" ? 260 : (this.tipo === "BARLEY" ? 225 : 85);
+
     if (alvo && menorDist < 540) {
       let temVisao = this.tipo === "BARLEY" ? true : this.temLinhaDeVisao(alvo.x, alvo.y);
       let angAlvo = atan2(alvo.y - this.y, alvo.x - this.x);
       let poucaVida = this.vida < this.vidaMax * 0.35;
 
+      // 1. MOVIMENTAÇÃO TÁTICA POR CLASSE
       if (this.tipo === "BARLEY") {
         this.moverBarleyTatico(alvo, menorDist, true);
       } else if (poucaVida && menorDist <= 220) {
-
-        // PERTO COM POUCA VIDA: arrisca e vai pra cima com tudo!
+        // Perto com pouca vida: vai pra cima com tudo
         this.navegarPara(alvo.x, alvo.y, 1.05);
         this.angulo = angAlvo;
-
-        let alcanceDisparo = this.tipo === "ASH" ? 135 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 330));
-        if (menorDist <= alcanceDisparo && temVisao) {
-          if (this.tipo === "BARLEY") {
-            this.angulo = this.calcularAlvoPreditivoBarley(alvo).angulo;
-          }
-          if (this.delayReacao > 0) {
-            this.delayReacao--;
-          } else if (this.superCarga >= 100 && !this.estaAtacandoAgora()) {
-            this.usarSuper();
-            this.delayReacao = Math.floor(random(22, 36));
-          } else if (this.municao >= 1 && !this.estaAtacandoAgora()) {
-            this.atacar();
-            this.delayReacao = Math.floor(random(22, 36));
-          }
-        }
-        return;
       } else if (poucaVida && menorDist > 220) {
-        // LONGE COM POUCA VIDA: foge em zigue-zague e desvia de tiros próximos
+        // Longe com pouca vida: foge desviando de projéteis
         let angFuga = angAlvo + PI + sin(frameCount * 0.22) * 0.72;
-
-        for (let p of projeteis) {
-          if (p.time !== this.time && p.vida > 0 && dist(this.x, this.y, p.x, p.y) < 160) {
-            let angParaMim = atan2(this.y - p.y, this.x - p.x);
-            let diff = atan2(sin(angParaMim - p.angulo), cos(angParaMim - p.angulo));
-            if (abs(diff) < 0.7) {
-              angFuga = p.angulo + (diff >= 0 ? HALF_PI : -HALF_PI);
-              break;
-            }
-          }
+        let esquiva = this.calcularVetorDesvioProjeteis();
+        if (esquiva.x !== 0 || esquiva.y !== 0) {
+          angFuga = atan2(sin(angFuga) + esquiva.y, cos(angFuga) + esquiva.x);
         }
-
         this.navegarPara(this.x + cos(angFuga) * 150, this.y + sin(angFuga) * 150, 1.0);
         this.angulo = angAlvo;
       } else if (!temVisao) {
-        let angMov = this.navegarPara(alvo.x, alvo.y, 0.92);
+        let angMov = this.navegarPara(alvo.x, alvo.y, 0.94);
         this.angulo = angMov;
+      } else if (ehCurtoAlcance) {
+        this.aproximarCurtoAlcance(alvo, menorDist);
+        this.angulo = angAlvo;
       } else if (menorDist > alcanceIdeal) {
         let angMov = this.navegarPara(alvo.x, alvo.y, 0.9);
         this.angulo = lerp(angMov, angAlvo, 0.7);
-      } else if (menorDist < alcanceIdeal * 0.65 && (this.tipo === "COLT" || this.tipo === "BARLEY")) {
+      } else if (menorDist < alcanceIdeal * 0.65 && this.tipo === "COLT") {
         let angRecuo = angAlvo + PI;
         this.navegarPara(this.x + cos(angRecuo) * 100, this.y + sin(angRecuo) * 100, 0.75);
         this.angulo = angAlvo;
@@ -6593,29 +6728,58 @@ class Brawler {
         this.angulo = angAlvo;
       }
 
-      let alcanceDisparo = this.tipo === "ASH" ? 135 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 330));
+      // 2. USO ESTRATÉGICO DA SUPER DO TRUNK PARA CHEGAR PERTO
+      if (this.tipo === "TRUNK" && this.superCarga >= 100 && temVisao && menorDist >= 155 && menorDist <= 275) {
+        if (this.delaySuperBot > 0) {
+          this.delaySuperBot--;
+        } else {
+          this.angulo = angAlvo;
+          this.usarSuper();
+          this.delaySuperBot = Math.floor(random(20, 40));
+          return;
+        }
+      }
+
+      // 3. PRÉ-ATAQUE DO TRUNK (calcula o delay de 30 frames antes de encostar)
+      if (this.tipo === "TRUNK" && temVisao && this.trunkDevePréAtacar(alvo, menorDist)) {
+        this.angulo = angAlvo;
+        this.atacar();
+        return;
+      }
+
+      // 4. DISPAROS E SUPERS NORMAIS
+      let alcanceDisparo = this.tipo === "ASH" ? 140 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 335));
       if (menorDist <= alcanceDisparo && temVisao) {
         if (this.tipo === "BARLEY") {
-          let pred = this.calcularAlvoPreditivoBarley(alvo);
-          this.angulo = pred.angulo;
+          this.angulo = this.calcularAlvoPreditivoBarley(alvo).angulo;
+        } else if (this.tipo === "COLT") {
+          this.angulo = this.calcularAlvoPreditivoColt(alvo, false);
         } else {
           this.angulo = angAlvo;
         }
+
         if (this.podeAtirarTaticamente(alvo, menorDist, alcanceDisparo)) {
-          if (this.delayReacao > 0) {
+          if (ehCurtoAlcance) {
+            // Curto alcance descarrega todas as munições imediatamente sem hesitar
+            this.atacar();
+            this.delayReacao = 0;
+          } else if (this.delayReacao > 0) {
             this.delayReacao--;
           } else {
             this.atacar();
-            this.delayReacao = Math.floor(random(22, 46));
+            this.delayReacao = this.tipo === "COLT" ? Math.floor(random(18, 34)) : Math.floor(random(22, 46));
           }
         }
 
-        if (this.superCarga >= 100) {
+        if (this.superCarga >= 100 && this.tipo !== "TRUNK") {
           if (this.delaySuperBot > 0) {
             this.delaySuperBot--;
           } else {
+            if (this.tipo === "COLT") {
+              this.angulo = this.calcularAlvoPreditivoColt(alvo, true);
+            }
             this.usarSuper();
-            this.delaySuperBot = Math.floor(random(25, 50));
+            this.delaySuperBot = Math.floor(random(24, 46));
           }
         }
       }
@@ -6632,8 +6796,8 @@ class Brawler {
       this.angulo = angPatrulha;
     }
   }
-  
-    iaFutebrawl(bolaObj, meusAliados, meusInimigos) {
+
+  iaFutebrawl(bolaObj, meusAliados, meusInimigos) {
     let meioX = mundoLargura / 2;
     let golInimigoY = this.time === "AZUL" ? 125 : mundoAltura - 125;
 
@@ -6718,15 +6882,20 @@ class Brawler {
     }
     this.tempoComBola = 0;
 
+    let ehCurtoAlcance = this.tipo === "ASH" || this.tipo === "TRUNK";
     let limparCaminhoPrimeiro = inimigosBloqueando >= 2 && maisPerto && (!bolaObj.posse || bolaObj.posse.time !== this.time);
 
     let destX = bolaObj.x;
     let destY = bolaObj.y;
+    let usouMovimentoCurtoAlcance = false;
 
     if (limparCaminhoPrimeiro) {
       let alcanceIdeal = this.tipo === "COLT" ? 250 : (this.tipo === "BARLEY" ? 220 : 85);
       let angIni = atan2(maisPerto.y - this.y, maisPerto.x - this.x);
-      if (menorD > alcanceIdeal) {
+      if (ehCurtoAlcance && this.temLinhaDeVisao(maisPerto.x, maisPerto.y)) {
+        this.aproximarCurtoAlcance(maisPerto, menorD);
+        usouMovimentoCurtoAlcance = true;
+      } else if (menorD > alcanceIdeal) {
         destX = maisPerto.x;
         destY = maisPerto.y;
       } else {
@@ -6754,37 +6923,70 @@ class Brawler {
         let recuoDefesaY = this.time === "AZUL" ? 105 : -105;
         destX = lerp(bolaObj.x, this.zonaPreferidaX || meioX, 0.55);
         destY = constrain(bolaObj.y + recuoDefesaY, 180, mundoAltura - 180);
+      } else if (this.tipo === "TRUNK" && !this.estaNaTerraTrunk()) {
+        let poca = this.obterPocaTerraEstrategica({ x: bolaObj.x, y: bolaObj.y });
+        if (poca) {
+          destX = poca.x;
+          destY = poca.y;
+        }
       }
     }
 
-    let angMov = this.navegarPara(destX, destY, 0.94);
+    let angMov = usouMovimentoCurtoAlcance ? this.angulo : this.navegarPara(destX, destY, 0.94);
 
     if (maisPerto && menorD < 360) {
       let angIni = atan2(maisPerto.y - this.y, maisPerto.x - this.x);
       let temVisao = this.tipo === "BARLEY" ? true : this.temLinhaDeVisao(maisPerto.x, maisPerto.y);
-      let alcanceDisparo = this.tipo === "ASH" ? 135 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 320));
+
+      // Trunk usa Super para fechar distância no portador da bola ou inimigo bloqueando
+      if (this.tipo === "TRUNK" && this.superCarga >= 100 && temVisao && menorD >= 150 && menorD <= 275 && (!bolaObj.posse || bolaObj.posse.time !== this.time)) {
+        if (this.delaySuperBot > 0) {
+          this.delaySuperBot--;
+        } else {
+          this.angulo = angIni;
+          this.usarSuper();
+          this.delaySuperBot = Math.floor(random(20, 40));
+          return;
+        }
+      }
+
+      // Pré-ataque do Trunk no Fute-Brawl
+      if (this.tipo === "TRUNK" && temVisao && this.trunkDevePréAtacar(maisPerto, menorD)) {
+        this.angulo = angIni;
+        this.atacar();
+        return;
+      }
+
+      let alcanceDisparo = this.tipo === "ASH" ? 140 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 325));
 
       if (menorD <= alcanceDisparo && temVisao) {
         if (this.tipo === "BARLEY") {
-          let pred = this.calcularAlvoPreditivoBarley(maisPerto);
-          this.angulo = pred.angulo;
+          this.angulo = this.calcularAlvoPreditivoBarley(maisPerto).angulo;
+        } else if (this.tipo === "COLT") {
+          this.angulo = this.calcularAlvoPreditivoColt(maisPerto, false);
         } else {
           this.angulo = angIni;
         }
 
         if (this.podeAtirarTaticamente(maisPerto, menorD, alcanceDisparo, bolaObj)) {
-          if (this.delayReacao > 0) {
+          if (ehCurtoAlcance) {
+            this.atacar();
+            this.delayReacao = 0;
+          } else if (this.delayReacao > 0) {
             this.delayReacao--;
           } else {
             this.atacar();
-            this.delayReacao = Math.floor(random(20, 42));
+            this.delayReacao = this.tipo === "COLT" ? Math.floor(random(16, 32)) : Math.floor(random(20, 42));
           }
         }
 
-        if (this.superCarga >= 100 && (!bolaObj.posse || bolaObj.posse.time !== this.time)) {
+        if (this.superCarga >= 100 && this.tipo !== "TRUNK" && (!bolaObj.posse || bolaObj.posse.time !== this.time)) {
           if (this.delaySuperBot > 0) {
             this.delaySuperBot--;
           } else {
+            if (this.tipo === "COLT") {
+              this.angulo = this.calcularAlvoPreditivoColt(maisPerto, true);
+            }
             this.usarSuper();
             this.delaySuperBot = Math.floor(random(24, 48));
           }
