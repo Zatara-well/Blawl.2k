@@ -8217,16 +8217,5 @@ function clicarFerramentaSpawnMapMaker(x, y, modo, larguraMapa, alturaMapa, apen
     }
     spawnsEditor.push({ x, y });
   }
-  } else {
-    // Fute-Brawl: limite de 3 no lado Azul e 3 no lado Vermelho
-    let clicouAzul = ehLadoAzul(x, y, larguraMapa, alturaMapa);
-    let doMesmoLado = spawnsEditor.filter((s) => ehLadoAzul(s.x, s.y, larguraMapa, alturaMapa) === clicouAzul);
-
-    if (doMesmoLado.length >= 3) {
-      let idxMaisAntigo = spawnsEditor.indexOf(doMesmoLado[0]);
-      if (idxMaisAntigo !== -1) spawnsEditor.splice(idxMaisAntigo, 1);
-    }
-    spawnsEditor.push({ x, y });
-  }
 }
 
