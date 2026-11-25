@@ -7774,6 +7774,7 @@ class RatoAsh {
     text(max(0, Math.ceil(this.vida)), this.x, by - 1.5);
     noStroke();
   }
+} 
 // ==========================================
 // GARRAFA DO BARLEY (VOO EM ARCO)
 // ==========================================
@@ -7960,19 +7961,6 @@ class GarrafaBarley {
     for (let alvoRegistrado of this.ultimoDanoAlvo.keys()) {
       if (!alvosNaPoca.has(alvoRegistrado)) {
         this.ultimoDanoAlvo.delete(alvoRegistrado);
-      }
-    }
-  }
-
-    for (let rt of ratosAsh) {
-      if (rt.time !== this.time && rt.vida > 0) {
-        if (dist(this.x, this.y, rt.x, rt.y) <= this.raio + rt.raio * 0.65) {
-          let ultimoFrame = this.ultimoDanoAlvo.get(rt);
-          if (ultimoFrame === undefined || frameDecorrido - ultimoFrame >= this.intervaloDanoFrames) {
-            this.ultimoDanoAlvo.set(rt, frameDecorrido);
-            rt.receberDano(this.danoTick, this.dono);
-          }
-        }
       }
     }
   }
