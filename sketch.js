@@ -5578,7 +5578,9 @@ class Brawler {
     this.delaySuperBot = Math.floor(random(20, 45));
     this.zonaPreferidaY = y;
     this.tempoComBola = 0;
-                   // vida maxima velocidade e dano base!
+    ////////////////////////////////////////
+    // vida maxima velocidade e dano base!//
+    ////////////////////////////////////////
     if (this.tipo === "ASH") {
       this.vidaMax = 4500;
       this.velocidade = 2.65;
@@ -5610,7 +5612,6 @@ class Brawler {
   estaAtacandoAgora() {
     if (this.cooldownAtaque > 0) return true;
     if (this.delayAtaqueTrunk > 0 || this.giroTrunk > 0) return true;
-    if (this.filaDisparosColt && this.filaDisparosColt.length > 0) return true;
     if (this.dashTimer > 0) return true;
     return false;
   }
@@ -6115,32 +6116,38 @@ class Brawler {
       }
     } else if (this.tipo === "TRUNK") {
       this.delayAtaqueTrunk = 30;
-    } else if (this.tipo === "COLT") {
+
+     } else if (this.tipo === "COLT") {
       this.anguloAtaqueTravado = this.angulo;
       this.filaDisparosColt = [];
+      this.ladoPistolaColt *= -1;
+      let inicio = this.ladoPistolaColt;
 
-      // Dispara a 1ª bala imediatamente e as outras 5 a cada 2 frames (cadência perfeitamente lisa)
+      // Dispara a 1ª bala imediatamente
       this.dispararBalaColt({
-        offsetLateral: -7,
-        vel: 10.2,
+        offsetLateral: inicio * 6,
+        vel: 11.5,
         alcance: 345,
         dano: this.danoBase,
         estilo: "COLT_NORMAL",
         ehSuper: false
       });
 
+      // Enfileira as outras 5 balas (alternando esquerda/direita a cada 3 frames)
       for (let i = 1; i < 6; i++) {
-        let lado = i % 2 === 0 ? -7 : 7;
+        let lado = (i % 2 === 0 ? inicio : -inicio) * 6;
         this.filaDisparosColt.push({
-          espera: 2,
+          espera: 3,
           offsetLateral: lado,
-          vel: 10.2,
+          vel: 11.5,
           alcance: 345,
           dano: this.danoBase,
           estilo: "COLT_NORMAL",
           ehSuper: false
         });
       }
+    }
+
     } else if (this.tipo === "BARLEY") {
       let alvo = this.calcularAlvoBarley();
       let tempoVoo = this.calcularTempoVooBarley(dist(this.x, this.y, alvo.x, alvo.y));
@@ -6178,15 +6185,17 @@ class Brawler {
       this.dashAngulo = this.angulo;
       this.tickEngancheTrunk = 0;
       this.distPocaTrunk = 0;
-     } else if (this.tipo === "COLT") {
+      
+    } else if (this.tipo === "COLT") {
       this.cooldownAtaque = 28;
       this.anguloSuperTravado = this.angulo;
       this.filaDisparosColt = [];
-      
-      // Dispara a 1ª bala da Super imediatamente e as outras 11 a cada 2 frames (rajada contínua)
+      this.ladoPistolaColt *= -1;
+      let inicio = this.ladoPistolaColt;
+
       this.dispararBalaColt({
-        offsetLateral: -8,
-        vel: 12.8,
+        offsetLateral: inicio * 7,
+        vel: 13.5,
         alcance: 430,
         dano: 200,
         estilo: "COLT_SUPER",
@@ -6194,17 +6203,18 @@ class Brawler {
       });
 
       for (let i = 1; i < 12; i++) {
-        let lado = i % 2 === 0 ? -8 : 8;
+        let lado = (i % 2 === 0 ? inicio : -inicio) * 7;
         this.filaDisparosColt.push({
           espera: 2,
           offsetLateral: lado,
-          vel: 12.8,
+          vel: 13.5,
           alcance: 430,
           dano: 200,
           estilo: "COLT_SUPER",
           ehSuper: true
         });
       }
+
     } else if (this.tipo === "BARLEY") {
       let centroAlvo = this.calcularAlvoBarley();
       let dirX = cos(this.angulo);
