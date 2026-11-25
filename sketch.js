@@ -2886,11 +2886,10 @@ function pontoValidoNoEditor(gx, gy, larg, alt) {
   return dentroCampoPrincipal || dentroGolCima || dentroGolBaixo;
 }
 
-function aplicarFerramentaNoCelula(gx, gy, larg, alt) {
+  function aplicarFerramentaNoCelula(gx, gy, larg, alt) {
   if (!pontoValidoNoEditor(gx, gy, larg, alt)) return;
 
   if (ferramentaEditor === "PAREDE") {
-    if (editorMapa.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
     let jaExiste = editorMapa.obstaculos.some((o) => o.x === gx && o.y === gy);
     let emCimaDoSpawn = spawnsEditor.some((s) => dist(gx + 25, gy + 25, s.x, s.y) < 34);
     if (!jaExiste && !emCimaDoSpawn) {
@@ -2898,7 +2897,6 @@ function aplicarFerramentaNoCelula(gx, gy, larg, alt) {
       editorMapa.obstaculos.push({ x: gx, y: gy, w: GRADE_EDITOR, h: GRADE_EDITOR });
     }
   } else if (ferramentaEditor === "MOITA") {
-    if (editorMapa.modoBase === "FUTEBRAWL" && (gy < 150 || gy > alt - 200)) return;
     let jaExisteMoita = editorMapa.moitas.some((m) => m.x === gx && m.y === gy);
     let temParede = editorMapa.obstaculos.some((o) => o.x === gx && o.y === gy);
     if (!jaExisteMoita && !temParede) {
@@ -3578,28 +3576,34 @@ if (sortearBots) {
 
   jogador = new Brawler(posAzul[0].x, posAzul[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
   jogador.angulo = -HALF_PI;
+  jogador.indiceSpawnGol = 0;
 
   let aliado1 = new Brawler(posAzul[1].x, posAzul[1].y, embaralhadoAzul[0], "AZUL", false);
   aliado1.zonaPreferidaX = posAzul[1].x;
   aliado1.angulo = -HALF_PI;
+  aliado1.indiceSpawnGol = 1;
 
   let aliado2 = new Brawler(posAzul[2].x, posAzul[2].y, embaralhadoAzul[1], "AZUL", false);
   aliado2.zonaPreferidaX = posAzul[2].x;
   aliado2.angulo = -HALF_PI;
+  aliado2.indiceSpawnGol = 2;
 
   aliados = [aliado1, aliado2];
 
   let ini1 = new Brawler(posVerm[0].x, posVerm[0].y, embaralhadoVermelho[0], "VERMELHO", false);
   ini1.zonaPreferidaX = posVerm[0].x;
   ini1.angulo = HALF_PI;
+  ini1.indiceSpawnGol = 0;
 
   let ini2 = new Brawler(posVerm[1].x, posVerm[1].y, embaralhadoVermelho[1], "VERMELHO", false);
   ini2.zonaPreferidaX = posVerm[1].x;
   ini2.angulo = HALF_PI;
+  ini2.indiceSpawnGol = 1;
 
   let ini3 = new Brawler(posVerm[2].x, posVerm[2].y, embaralhadoVermelho[2], "VERMELHO", false);
   ini3.zonaPreferidaX = posVerm[2].x;
   ini3.angulo = HALF_PI;
+  ini3.indiceSpawnGol = 2;
 
   inimigos = [ini1, ini2, ini3];
 
@@ -3809,72 +3813,89 @@ function atualizarJogo() {
     encerrarPartidaComTelaFim("FIM DE JOGO • #" + colocacao + " DE 10", null);
     return;
   } else if (modoSelecionado === "FUTEBRAWL") {
-  if (jogador.respawnTimer <= 0) jogador.respawnTimer = 180;
-  jogador.respawnTimer--;
-  if (jogador.respawnTimer <= 0) {
-    jogador.vida = jogador.vidaMax;
-    jogador.municao = 3;
-   let spawnsAzuisRespawn = (mapasOficiais.FUTEBRAWL && mapasOficiais.FUTEBRAWL.spawns)
-     ? mapasOficiais.FUTEBRAWL.spawns.filter((s) => ehLadoAzul(s.x, s.y, mundoLargura, mundoAltura))
-     : [];
-   if (spawnsAzuisRespawn.length > 0) {
-     jogador.x = spawnsAzuisRespawn[0].x;
-     jogador.y = spawnsAzuisRespawn[0].y;
+    if (jogador.respawnTimer <= 0) jogador.respawnTimer = 300; // 5 segundos igual no vídeo
+    jogador.respawnTimer--;
+    if (jogador.respawnTimer <= 0) {
+      let pontoGol = obterCirculosRespawnGol("AZUL")[jogador.indiceSpawnGol || 0];
+      jogador.x = pontoGol.x;
+      jogador.y = pontoGol.y;
+      jogador.vida = jogador.vidaMax;
+      jogador.municao = 3;
+      jogador.recarga = 0;
+      jogador.cooldownAtaque = 0;
+      jogador.angulo = -HALF_PI;
+      jogador.escudoRespawn = 180; // 3s de bolha de imunidade ao renascer
+    }
+  }
+
+  // Câmera segue o jogador vivo ou desliza até o círculo do gol quando ele morre (igual no vídeo)
+  let focoCamX = jogador.x;
+  let focoCamY = jogador.y;
+  if (modoSelecionado === "FUTEBRAWL" && jogador.vida <= 0) {
+    let pontoGolCam = obterCirculosRespawnGol("AZUL")[jogador.indiceSpawnGol || 0];
+    // Nos primeiros 1,5s fica onde morreu e depois desliza suavemente pro gol
+    if (jogador.respawnTimer < 210) {
+      focoCamX = pontoGolCam.x;
+      focoCamY = pontoGolCam.y;
+    }
+  }
+  let alvoCamX = constrain(focoCamX - width / 2, 0, mundoLargura - width);
+  let alvoCamY = constrain(focoCamY - height / 2, 0, mundoAltura - height);
+  camX = lerp(camX, alvoCamX, 0.12);
+  camY = lerp(camY, alvoCamY, 0.12);
+
+  for (let a of aliados) {
+    if (a.vida > 0) {
+      if (a.dashTimer <= 0) a.iaFutebrawl(bola, [jogador, ...aliados], inimigos);
+      a.atualizar();
     } else {
-     jogador.x = mundoLargura / 2;
-     jogador.y = mundoAltura - 185;
+      if (a.respawnTimer <= 0) a.respawnTimer = 300;
+      a.respawnTimer--;
+      if (a.respawnTimer <= 0) {
+        let pontoGol = obterCirculosRespawnGol("AZUL")[a.indiceSpawnGol || 1];
+        a.x = pontoGol.x;
+        a.y = pontoGol.y;
+        a.vida = a.vidaMax;
+        a.municao = 3;
+        a.recarga = 0;
+        a.cooldownAtaque = 0;
+        a.angulo = -HALF_PI;
+        a.escudoRespawn = 180;
+      }
     }
   }
-}
 
-let alvoCamX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
-let alvoCamY = constrain(jogador.y - height / 2, 0, mundoAltura - height);
-camX = lerp(camX, alvoCamX, 0.14);
-camY = lerp(camY, alvoCamY, 0.14);
-
-for (let a of aliados) {
-  if (a.vida > 0) {
-    if (a.dashTimer <= 0) a.iaFutebrawl(bola, [jogador, ...aliados], inimigos);
-    a.atualizar();
-  } else {
-    if (a.respawnTimer <= 0) a.respawnTimer = 180;
-    a.respawnTimer--;
-    if (a.respawnTimer <= 0) {
-      a.vida = a.vidaMax;
-      a.municao = 3;
-      a.x = a.zonaPreferidaX || random(220, mundoLargura - 220);
-      a.y = mundoAltura - 185;
-    }
-  }
-}
-
-for (let i = inimigos.length - 1; i >= 0; i--) {
-  let ini = inimigos[i];
-  if (ini.vida > 0) {
-    if (ini.dashTimer <= 0) {
+  for (let i = inimigos.length - 1; i >= 0; i--) {
+    let ini = inimigos[i];
+    if (ini.vida > 0) {
+      if (ini.dashTimer <= 0) {
+        if (modoSelecionado === "COMBATE") {
+          ini.iaCombate(todosBrawlers);
+        } else {
+          ini.iaFutebrawl(bola, inimigos, [jogador, ...aliados]);
+        }
+      }
+      ini.atualizar();
+    } else {
       if (modoSelecionado === "COMBATE") {
-        ini.iaCombate(todosBrawlers);
+        inimigos.splice(i, 1);
       } else {
-        ini.iaFutebrawl(bola, inimigos, [jogador, ...aliados]);
-      }
-    }
-    ini.atualizar();
-  } else {
-    if (modoSelecionado === "COMBATE") {
-      inimigos.splice(i, 1);
-    } else {
-      if (ini.respawnTimer <= 0) ini.respawnTimer = 180;
-      ini.respawnTimer--;
-      if (ini.respawnTimer <= 0) {
-        ini.vida = ini.vidaMax;
-        ini.municao = 3;
-        ini.x = ini.zonaPreferidaX || random(220, mundoLargura - 220);
-        ini.y = 185;
+        if (ini.respawnTimer <= 0) ini.respawnTimer = 300;
+        ini.respawnTimer--;
+        if (ini.respawnTimer <= 0) {
+          let pontoGol = obterCirculosRespawnGol("VERMELHO")[ini.indiceSpawnGol || 0];
+          ini.x = pontoGol.x;
+          ini.y = pontoGol.y;
+          ini.vida = ini.vidaMax;
+          ini.municao = 3;
+          ini.recarga = 0;
+          ini.cooldownAtaque = 0;
+          ini.angulo = HALF_PI;
+          ini.escudoRespawn = 180;
+        }
       }
     }
   }
-}
-
 
   for (let i = pocasTerra.length - 1; i >= 0; i--) {
     pocasTerra[i].vida--;
@@ -4345,6 +4366,52 @@ function inimigoReveladoNaMoita(b) {
   }
   return false;
 }
+function obterCirculosRespawnGol(time) {
+  let meioX = mundoLargura / 2;
+  let yPos = time === "AZUL" ? mundoAltura - 62 : 62;
+  return [
+    { x: meioX, y: yPos },       // Índice 0: centro
+    { x: meioX - 75, y: yPos },  // Índice 1: esquerda
+    { x: meioX + 75, y: yPos }   // Índice 2: direita
+  ];
+}
+
+function desenharCirculosRespawnGol() {
+  if (modoSelecionado !== "FUTEBRAWL") return;
+
+  let circulosAzul = obterCirculosRespawnGol("AZUL");
+  let circulosVermelho = obterCirculosRespawnGol("VERMELHO");
+
+  push();
+  // 3 círculos de respawn no gol Azul (baixo)
+  for (let c of circulosAzul) {
+    noStroke();
+    fill(0, 140, 255, 70);
+    ellipse(c.x, c.y, 44, 44);
+    noFill();
+    stroke(120, 220, 255, 190);
+    strokeWeight(2.5);
+    ellipse(c.x, c.y, 40, 40);
+    stroke(255, 255, 255, 110);
+    strokeWeight(1.5);
+    ellipse(c.x, c.y, 28, 28);
+  }
+
+  // 3 círculos de respawn no gol Vermelho (cima)
+  for (let c of circulosVermelho) {
+    noStroke();
+    fill(255, 60, 60, 70);
+    ellipse(c.x, c.y, 44, 44);
+    noFill();
+    stroke(255, 140, 140, 190);
+    strokeWeight(2.5);
+    ellipse(c.x, c.y, 40, 40);
+    stroke(255, 255, 255, 110);
+    strokeWeight(1.5);
+    ellipse(c.x, c.y, 28, 28);
+  }
+  pop();
+}
 
 function desenharJogo() {
   push();
@@ -4403,6 +4470,17 @@ function desenharJogo() {
     stroke(140, 225, 255);
     strokeWeight(4);
     rect(golEsq, mundoAltura - 135, 250, 100, 6);
+
+    // Linha tracejada na entrada dos dois gols (igual da imagem)
+    stroke(255, 255, 255, 210);
+    strokeWeight(3);
+    for (let lx = golEsq + 12; lx < golDir - 10; lx += 22) {
+      line(lx, 135, lx + 12, 135);
+      line(lx, mundoAltura - 135, lx + 12, mundoAltura - 135);
+    }
+
+    // Os 3 círculos de respawn atrás de cada gol
+    desenharCirculosRespawnGol();
 
     // Traves nos cantos dos gols
     noStroke();
@@ -5243,12 +5321,16 @@ function desenharHUD() {
   }
 
   if (!celebracaoGol.ativo && jogador && jogador.vida <= 0 && modoSelecionado === "FUTEBRAWL") {
-    fill(15, 20, 35, 210);
-    rect(width / 2 - 160, height / 2 - 35, 320, 70, 14);
-    fill(255, 215, 0);
-    textSize(20);
     let seg = ceil(jogador.respawnTimer / 60);
-    text("RESSURGINDO EM " + seg + "s...", width / 2, height / 2);
+    textStyle(BOLD);
+    stroke(12, 16, 24, 245);
+    strokeWeight(5);
+    fill(255);
+    textSize(24);
+    text("Voltando em:", width / 2, height * 0.34);
+    textSize(42);
+    text(seg, width / 2, height * 0.42);
+    noStroke();
   }
 
   if (jogador && jogador.vida > 0 && !ehMobile) {
@@ -5720,6 +5802,7 @@ class Brawler {
 
   receberDano(qtd, corTexto = color(255, 255, 255), ehCritico = false, atacante = null) {
     if (this.vida <= 0) return;
+    if (this.escudoRespawn && this.escudoRespawn > 0) return;
     let danoReal = min(this.vida, qtd);
     this.vida -= qtd;
     this.tempoSemDano = 0;
@@ -5881,6 +5964,10 @@ class Brawler {
   }
 
   atualizar() {
+    if (this.escudoRespawn && this.escudoRespawn > 0) {
+      this.escudoRespawn--;
+      if (this.estaAtacandoAgora()) this.escudoRespawn = 0; // Atirar cancela o escudo
+    }
     if (this.animAtaque > 0) this.animAtaque -= 0.12;
     if (this.giroTrunk > 0) this.giroTrunk = max(0, this.giroTrunk - 0.55);
 
@@ -6711,17 +6798,27 @@ class Brawler {
   }
 
   desenharRespawn() {
+    let pontoGol = obterCirculosRespawnGol(this.time)[this.indiceSpawnGol || 0];
+    let pulso = sin(frameCount * 0.2) * 3;
     push();
-    translate(this.x, this.y);
-    noFill();
-    stroke(this.time === "AZUL" ? color(0, 200, 255, 160) : color(255, 80, 80, 160));
-    strokeWeight(3);
-    ellipse(0, 0, 44, 44);
-    fill(255);
+    translate(pontoGol.x, pontoGol.y);
+
+    // Bolha brilhante no círculo atrás do gol enquanto espera renascer
     noStroke();
-    textSize(14);
+    fill(this.time === "AZUL" ? color(70, 200, 255, 95) : color(255, 85, 85, 95));
+    ellipse(0, 0, 46 + pulso, 46 + pulso);
+
+    noFill();
+    stroke(255, 255, 255, 220);
+    strokeWeight(2.5);
+    ellipse(0, 0, 42 + pulso, 42 + pulso);
+
+    fill(255);
+    stroke(15, 20, 30, 230);
+    strokeWeight(3);
+    textSize(16);
     textStyle(BOLD);
-    text(ceil(this.respawnTimer / 60) + "s", 0, 0);
+    text(ceil(this.respawnTimer / 60), 0, 1);
     pop();
   }
 
@@ -6751,6 +6848,16 @@ class Brawler {
       stroke(255, 215, 0, 200 + sin(frameCount * 0.2) * 55);
       strokeWeight(3);
       ellipse(0, 0, 62, 62);
+    }
+    
+    if (this.escudoRespawn && this.escudoRespawn > 0) {
+      noStroke();
+      fill(130, 225, 255, 85);
+      ellipse(0, 0, 66, 66);
+      noFill();
+      stroke(200, 245, 255, 220);
+      strokeWeight(2.5);
+      ellipse(0, 0, 66, 66);
     }
 
     if (this.tipo === "ASH") {
@@ -8099,6 +8206,17 @@ function clicarFerramentaSpawnMapMaker(x, y, modo, larguraMapa, alturaMapa, apen
       spawnsEditor.shift();
     }
     spawnsEditor.push({ x, y });
+  } else {
+    // Fute-Brawl: limite de 3 no lado Azul e 3 no lado Vermelho
+    let clicouAzul = ehLadoAzul(x, y, larguraMapa, alturaMapa);
+    let doMesmoLado = spawnsEditor.filter((s) => ehLadoAzul(s.x, s.y, larguraMapa, alturaMapa) === clicouAzul);
+
+    if (doMesmoLado.length >= 3) {
+      let idxMaisAntigo = spawnsEditor.indexOf(doMesmoLado[0]);
+      if (idxMaisAntigo !== -1) spawnsEditor.splice(idxMaisAntigo, 1);
+    }
+    spawnsEditor.push({ x, y });
+  }
   } else {
     // Fute-Brawl: limite de 3 no lado Azul e 3 no lado Vermelho
     let clicouAzul = ehLadoAzul(x, y, larguraMapa, alturaMapa);
