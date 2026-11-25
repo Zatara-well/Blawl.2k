@@ -5554,6 +5554,7 @@ class Brawler {
     this.filaDisparosColt = [];
     this.anguloSuperTravado = 0;
     this.anguloAtaqueTravado = 0;
+    this.ladoPistolaColt = -1; // Alterna a pistola inicial a cada rajada
 
     this.furia = 0;
     this.tempoSemFuria = 0;
