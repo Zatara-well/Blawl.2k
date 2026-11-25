@@ -2834,7 +2834,7 @@ function ehLadoAzul(x, y, larguraMapa, alturaMapa) {
   return y >= alturaMapa / 2;
 }
 function carregarModoNoEditor(modo) {
-  let larg = modo === "COMBATE" ? 2200 : 950;
+  let larg = modo === "COMBATE" ? 2200 : 1000;
   let alt = modo === "COMBATE" ? 2200 : 1550;
   let oficial = mapasOficiais[modo];
 
@@ -2911,7 +2911,8 @@ function pontoValidoNoEditor(gx, gy, larg, alt) {
 function aplicarFerramentaNoMapa(telaX, telaY) {
   if (telaY <= 54 || telaY >= height - 68) return;
 
-  let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 950;
+  let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 1000;
+```[cite: 13];
   let alt = editorMapa.modoBase === "COMBATE" ? 2200 : 1550;
   let mundoX = telaX + camEditorX;
   let mundoY = telaY + camEditorY;
@@ -3505,8 +3506,8 @@ for (let i = 1; i <= 9; i++) {
     camY = constrain(jogador.y - height / 2, 0, mundoAltura - height);
     estadoJogo = "JOGANDO";
   } else if (modoSelecionado === "FUTEBRAWL") {
-    mundoLargura = 950;
-    mundoAltura = 1550;
+    mundoLargura = 972;
+    mundoAltura = 1458;
     resetarPosicoesFutebrawl(true);
 
     camX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
