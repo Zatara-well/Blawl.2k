@@ -3814,12 +3814,15 @@ function atualizarJogo() {
   if (jogador.respawnTimer <= 0) {
     jogador.vida = jogador.vidaMax;
     jogador.municao = 3;
-   if (mapasOficiais.FUTEBRAWL) {
-      jogador.x = mapasOficiais.FUTEBRAWL.spawnX;
-      jogador.y = mapasOficiais.FUTEBRAWL.spawnY;
+   let spawnsAzuisRespawn = (mapasOficiais.FUTEBRAWL && mapasOficiais.FUTEBRAWL.spawns)
+     ? mapasOficiais.FUTEBRAWL.spawns.filter((s) => ehLadoAzul(s.x, s.y, mundoLargura, mundoAltura))
+     : [];
+   if (spawnsAzuisRespawn.length > 0) {
+     jogador.x = spawnsAzuisRespawn[0].x;
+     jogador.y = spawnsAzuisRespawn[0].y;
     } else {
-      jogador.x = mundoLargura / 2;
-      jogador.y = mundoAltura - 185;
+     jogador.x = mundoLargura / 2;
+     jogador.y = mundoAltura - 185;
     }
   }
 }
