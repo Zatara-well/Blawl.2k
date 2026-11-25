@@ -3549,107 +3549,111 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
       moitas.push({ x: m.x, y: m.y, w: m.w, h: m.h });
     }
   }
+  
+let posAzul = [
+  { x: meioX, y: mundoAltura - 310 },
+  { x: 220, y: mundoAltura - 260 },
+  { x: mundoLargura - 220, y: mundoAltura - 260 }
+];
+let posVerm = [
+  { x: meioX, y: 310 },
+  { x: 220, y: 260 },
+  { x: mundoLargura - 220, y: 260 }
+];
 
-  let spawnJogadorX = mapaFuteHost ? mapaFuteHost.spawnX : meioX;
-  let spawnJogadorY = mapaFuteHost ? mapaFuteHost.spawnY : mundoAltura - 310;
+if (mapaFuteHost && mapaFuteHost.spawns && mapaFuteHost.spawns.length > 0) {
+  let spawnsAzuisHost = mapaFuteHost.spawns.filter((s) => ehLadoAzul(s.x, s.y, mundoLargura, mundoAltura));
+  let spawnsVermHost = mapaFuteHost.spawns.filter((s) => !ehLadoAzul(s.x, s.y, mundoLargura, mundoAltura));
 
-  if (sortearBots) {
-    let poolDisponivel = DADOS_BRAWLERS.map((b) => b.id).filter((id) => id !== personagemSelecionado);
-    let embaralhadoAzul = shuffle(poolDisponivel);
+  for (let i = 0; i < min(3, spawnsAzuisHost.length); i++) posAzul[i] = spawnsAzuisHost[i];
+  for (let i = 0; i < min(3, spawnsVermHost.length); i++) posVerm[i] = spawnsVermHost[i];
+}
 
-    let todosTipos = DADOS_BRAWLERS.map((b) => b.id);
-    let embaralhadoVermelho = shuffle(todosTipos);
+if (sortearBots) {
+  let poolDisponivel = DADOS_BRAWLERS.map((b) => b.id).filter((id) => id !== personagemSelecionado);
+  let embaralhadoAzul = shuffle(poolDisponivel);
 
-    jogador = new Brawler(spawnJogadorX, spawnJogadorY, personagemSelecionado, "AZUL", true, nicknameJogador);
-    jogador.angulo = -HALF_PI;
+  let todosTipos = DADOS_BRAWLERS.map((b) => b.id);
+  let embaralhadoVermelho = shuffle(todosTipos);
 
-    let aliado1 = new Brawler(220, mundoAltura - 260, embaralhadoAzul[0], "AZUL", false);
-    aliado1.zonaPreferidaX = 220;
-    aliado1.angulo = -HALF_PI;
+  jogador = new Brawler(posAzul[0].x, posAzul[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
+  jogador.angulo = -HALF_PI;
 
-    let aliado2 = new Brawler(mundoLargura - 220, mundoAltura - 260, embaralhadoAzul[1], "AZUL", false);
-    aliado2.zonaPreferidaX = mundoLargura - 220;
-    aliado2.angulo = -HALF_PI;
+  let aliado1 = new Brawler(posAzul[1].x, posAzul[1].y, embaralhadoAzul[0], "AZUL", false);
+  aliado1.zonaPreferidaX = posAzul[1].x;
+  aliado1.angulo = -HALF_PI;
 
-    aliados = [aliado1, aliado2];
+  let aliado2 = new Brawler(posAzul[2].x, posAzul[2].y, embaralhadoAzul[1], "AZUL", false);
+  aliado2.zonaPreferidaX = posAzul[2].x;
+  aliado2.angulo = -HALF_PI;
 
-    let ini1 = new Brawler(meioX, 310, embaralhadoVermelho[0], "VERMELHO", false);
-    ini1.zonaPreferidaX = meioX;
-    ini1.angulo = HALF_PI;
+  aliados = [aliado1, aliado2];
 
-    let ini2 = new Brawler(220, 260, embaralhadoVermelho[1], "VERMELHO", false);
-    ini2.zonaPreferidaX = 220;
-    ini2.angulo = HALF_PI;
+  let ini1 = new Brawler(posVerm[0].x, posVerm[0].y, embaralhadoVermelho[0], "VERMELHO", false);
+  ini1.zonaPreferidaX = posVerm[0].x;
+  ini1.angulo = HALF_PI;
 
-    let ini3 = new Brawler(mundoLargura - 220, 260, embaralhadoVermelho[2], "VERMELHO", false);
-    ini3.zonaPreferidaX = mundoLargura - 220;
-    ini3.angulo = HALF_PI;
+  let ini2 = new Brawler(posVerm[1].x, posVerm[1].y, embaralhadoVermelho[1], "VERMELHO", false);
+  ini2.zonaPreferidaX = posVerm[1].x;
+  ini2.angulo = HALF_PI;
 
-    inimigos = [ini1, ini2, ini3];
+  let ini3 = new Brawler(posVerm[2].x, posVerm[2].y, embaralhadoVermelho[2], "VERMELHO", false);
+  ini3.zonaPreferidaX = posVerm[2].x;
+  ini3.angulo = HALF_PI;
 
-    estatisticasPartida = [];
-    registrarParticipantePartida(jogador);
-    registrarParticipantePartida(aliado1);
-    registrarParticipantePartida(aliado2);
-    registrarParticipantePartida(ini1);
-    registrarParticipantePartida(ini2);
-    registrarParticipantePartida(ini3);
-  } else {
-    let posAzul = [
-      { x: spawnJogadorX, y: spawnJogadorY },
-      { x: 220, y: mundoAltura - 260 },
-      { x: mundoLargura - 220, y: mundoAltura - 260 }
-    ];
-    let equipeAzul = [jogador, ...aliados];
-    for (let i = 0; i < equipeAzul.length; i++) {
-      let b = equipeAzul[i];
-      b.x = posAzul[i].x;
-      b.y = posAzul[i].y;
-      b.angulo = -HALF_PI;
-      b.vida = b.vidaMax;
-      b.municao = 3;
-      b.recarga = 0;
-      b.cooldownAtaque = 0;
-      b.respawnTimer = 0;
-      b.dashTimer = 0;
-      b.alvoEnganchadoTrunk = null;
-      b.delayAtaqueTrunk = 0;
-      b.giroTrunk = 0;
-      b.filaDisparosColt = [];
-      b.vxAtual = 0;
-      b.vyAtual = 0;
-      b.tempoComBola = 0;
-      b.furia = 0;
-      b.tempoSemFuria = 0;
-    }
+  inimigos = [ini1, ini2, ini3];
 
-    let posVerm = [
-      { x: meioX, y: 310 },
-      { x: 220, y: 260 },
-      { x: mundoLargura - 220, y: 260 }
-    ];
-    for (let i = 0; i < inimigos.length; i++) {
-      let b = inimigos[i];
-      b.x = posVerm[i].x;
-      b.y = posVerm[i].y;
-      b.angulo = HALF_PI;
-      b.vida = b.vidaMax;
-      b.municao = 3;
-      b.recarga = 0;
-      b.cooldownAtaque = 0;
-      b.respawnTimer = 0;
-      b.dashTimer = 0;
-      b.alvoEnganchadoTrunk = null;
-      b.delayAtaqueTrunk = 0;
-      b.giroTrunk = 0;
-      b.filaDisparosColt = [];
-      b.vxAtual = 0;
-      b.vyAtual = 0;
-      b.tempoComBola = 0;
-      b.furia = 0;
-      b.tempoSemFuria = 0;
-    }
+  estatisticasPartida = [];
+  registrarParticipantePartida(jogador);
+  registrarParticipantePartida(aliado1);
+  registrarParticipantePartida(aliado2);
+  registrarParticipantePartida(ini1);
+  registrarParticipantePartida(ini2);
+  registrarParticipantePartida(ini3);
+} else {
+  let equipeAzul = [jogador, ...aliados];
+  for (let i = 0; i < equipeAzul.length; i++) {
+    let b = equipeAzul[i];
+    b.x = posAzul[i].x;
+    b.y = posAzul[i].y;
+    b.angulo = -HALF_PI;
+    b.vida = b.vidaMax;
+    b.municao = 3;
+    b.recarga = 0;
+    b.cooldownAtaque = 0;
+    b.respawnTimer = 0;
+    b.dashTimer = 0;
+    b.delayAtaqueTrunk = 0;
+    b.giroTrunk = 0;
+    b.filaDisparosColt = [];
+    b.vxAtual = 0;
+    b.vyAtual = 0;
+    b.tempoComBola = 0;
+    b.furia = 0;
+    b.tempoSemFuria = 0;
   }
+
+  for (let i = 0; i < inimigos.length; i++) {
+    let b = inimigos[i];
+    b.x = posVerm[i].x;
+    b.y = posVerm[i].y;
+    b.angulo = HALF_PI;
+    b.vida = b.vidaMax;
+    b.municao = 3;
+    b.recarga = 0;
+    b.cooldownAtaque = 0;
+    b.respawnTimer = 0;
+    b.dashTimer = 0;
+    b.delayAtaqueTrunk = 0;
+    b.giroTrunk = 0;
+    b.filaDisparosColt = [];
+    b.vxAtual = 0;
+    b.vyAtual = 0;
+    b.tempoComBola = 0;
+    b.furia = 0;
+    b.tempoSemFuria = 0;
+  }
+}
 
   bola = {
     x: meioX,
