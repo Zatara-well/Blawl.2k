@@ -3503,8 +3503,8 @@ for (let i = 1; i <= 9; i++) {
     camY = constrain(jogador.y - height / 2, 0, mundoAltura - height);
     estadoJogo = "JOGANDO";
   } else if (modoSelecionado === "FUTEBRAWL") {
-    mundoLargura = 972;
-    mundoAltura = 1458;
+    mundoLargura = 1000;
+    mundoAltura = 1550;
     resetarPosicoesFutebrawl(true);
 
     camX = constrain(jogador.x - width / 2, 0, mundoLargura - width);
