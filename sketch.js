@@ -2934,7 +2934,8 @@ function aplicarFerramentaNoMapa(telaX, telaY) {
 }
 
 function desenharMapMaker() {
-  let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 950;
+  let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 1000;
+```[cite: 13]
   let alt = editorMapa.modoBase === "COMBATE" ? 2200 : 1550;
 
   let velCam = 10;
@@ -3017,8 +3018,8 @@ function desenharMapMaker() {
   }
 
   desenharSpawnsMapMaker(editorMapa.modoBase, larg, alt);
-  
-  if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA" && ferramentaEditor !== "SPAWN") {
+  if (!ehMobile && mouseY > 54 && mouseY < height - 68 && ferramentaEditor !== "CAMERA") {
+```[cite: 13]
     let gx = floor((mouseX + camEditorX) / GRADE_EDITOR) * GRADE_EDITOR;
     let gy = floor((mouseY + camEditorY) / GRADE_EDITOR) * GRADE_EDITOR;
     noFill();
@@ -3302,8 +3303,8 @@ function tratarCliqueCanvas(e, toqueX, toqueY) {
       }
       return;
     }
-
-    let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 950;
+let larg = editorMapa.modoBase === "COMBATE" ? 2200 : 1000;
+```[cite: 13]
 let alt = editorMapa.modoBase === "COMBATE" ? 2200 : 1550;
 
 if (ehBotaoDireito || ferramentaEditor === "CAMERA") {
@@ -8633,12 +8634,21 @@ function desenharControlesMobile() {
   text("SUPER", joySuper.knobX, joySuper.knobY);
   pop();
 }
-function clicarFerramentaSpawnMapMaker(x, y, modo, larguraMapa, alturaMapa, apenasRemover = false) {
-  x = constrain(x, 60, larguraMapa - 60);
-  y = constrain(y, 60, alturaMapa - 60);
+ function clicarFerramentaSpawnMapMaker(x, y, modo, larguraMapa, alturaMapa, apenasRemover = false) {
+  let gx = floor(x / GRADE_EDITOR) * GRADE_EDITOR;
+  let gy = floor(y / GRADE_EDITOR) * GRADE_EDITOR;
+
+  if (!apenasRemover && !pontoValidoNoEditor(gx, gy, larguraMapa, alturaMapa)) {
+    return;
+  }
+
+  // Encaixa exatamente no centro do quadrado da grade
+  x = gx + GRADE_EDITOR / 2;
+  y = gy + GRADE_EDITOR / 2;
 
   // 1 clique em cima de um spawn já colocado apaga ele
-  let idxExistente = spawnsEditor.findIndex((s) => dist(x, y, s.x, s.y) < 32);
+  let idxExistente = spawnsEditor.findIndex((s) => dist(x, y, s.x, s.y) < 25);
+```[cite: 13]
   if (idxExistente !== -1) {
     spawnsEditor.splice(idxExistente, 1);
     return;
