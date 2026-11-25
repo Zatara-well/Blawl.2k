@@ -6146,7 +6146,6 @@ class Brawler {
           ehSuper: false
         });
       }
-
     } else if (this.tipo === "BARLEY") {
       let alvo = this.calcularAlvoBarley();
       let tempoVoo = this.calcularTempoVooBarley(dist(this.x, this.y, alvo.x, alvo.y));
