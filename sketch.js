@@ -8669,4 +8669,59 @@ function desenharControlesMobile() {
     spawnsEditor.push({ x, y });
   }
 }
+// Gol com 6 espaços (300px) centralizado em 1000px (vai de x=350 até x=650)
+let margemGol = 350;
+let profGol = 100;
 
+// Gol Superior
+paredes.push({ x: 0, y: 0, w: margemGol, h: profGol, tipo: "indestrutivel" });
+paredes.push({ x: 1000 - margemGol, y: 0, w: margemGol, h: profGol, tipo: "indestrutivel" });
+
+// Gol Inferior
+paredes.push({ x: 0, y: 1550 - profGol, w: margemGol, h: profGol, tipo: "indestrutivel" });
+paredes.push({ x: 1000 - margemGol, y: 1550 - profGol, w: margemGol, h: profGol, tipo: "indestrutivel" });
+// =========================================================================
+// FUNÇÕES DE VISÃO E DESVIO DE PAREDE (RATOS DO ASH E BOTS)
+// =========================================================================
+function temLinhaDeVisao(x1, y1, x2, y2) {
+  let passos = ceil(dist(x1, y1, x2, y2) / 20);
+  for (let i = 1; i < passos; i++) {
+    let t = i / passos;
+    let px = lerp(x1, x2, t);
+    let py = lerp(y1, y2, t);
+    for (let p of paredes) {
+      if (px >= p.x && px <= p.x + p.w && py >= p.y && py <= p.y + p.h) {
+        return false; // Tem parede no meio do caminho
+      }
+    }
+  }
+  return true;
+}
+
+function calcularDirecaoContorno(entidade, alvoX, alvoY) {
+  let angDireto = atan2(alvoY - entidade.y, alvoX - entidade.x);
+
+  // Se o caminho está livre, vai direto
+  if (temLinhaDeVisao(entidade.x, entidade.y, alvoX, alvoY)) {
+    entidade.ladoContorno = 0;
+    return angDireto;
+  }
+
+  // Escolhe esquerda ou direita e mantém para não ficar girando
+  if (!entidade.ladoContorno) {
+    entidade.ladoContorno = random() < 0.5 ? 1 : -1;
+  }
+
+  for (let abertura = 30; abertura <= 135; abertura += 25) {
+    let angTeste = angDireto + radians(abertura * entidade.ladoContorno);
+    let tx = entidade.x + cos(angTeste) * 90;
+    let ty = entidade.y + sin(angTeste) * 90;
+
+    if (!colideComParede(tx, ty, entidade.raio)) {
+      return angTeste;
+    }
+  }
+
+  entidade.ladoContorno *= -1;
+  return angDireto + radians(90 * entidade.ladoContorno);
+}
