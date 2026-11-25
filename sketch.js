@@ -3467,24 +3467,28 @@ function iniciarPartida() {
       { x: 1520, y: 2030 },
       { x: 2020, y: 2000 }
     ];
+let mapaCombateHost = mapasOficiais.COMBATE;
+let listaSpawns = [];
 
-    let spawnsEmbaralhados = shuffle(pontosSpawn);
-    let mapaCombateHost = mapasOficiais.COMBATE;
-    jogador = new Brawler(spawnsEmbaralhados[0].x, spawnsEmbaralhados[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
-    if (mapaCombateHost) {
-      jogador.x = mapaCombateHost.spawnX;
-      jogador.y = mapaCombateHost.spawnY;
-    }
-    registrarParticipantePartida(jogador);
+if (mapaCombateHost && mapaCombateHost.spawns && mapaCombateHost.spawns.length > 0) {
+  listaSpawns = shuffle([...mapaCombateHost.spawns]);
+}
 
-    let poolBots = ["ASH", "TRUNK", "COLT", "BARLEY", "ASH", "TRUNK", "COLT", "BARLEY", "COLT"];
-    for (let i = 1; i <= 9; i++) {
-      let sp = spawnsEmbaralhados[i];
-      let bot = new Brawler(sp.x, sp.y, poolBots[i - 1], "BOT" + i, false);
-      bot.zonaPreferidaY = random(300, mundoAltura - 300);
-      inimigos.push(bot);
-      registrarParticipantePartida(bot);
-    }
+let padraoEmbaralhado = shuffle(pontosSpawn);
+while (listaSpawns.length < 10) {
+  listaSpawns.push(padraoEmbaralhado[listaSpawns.length]);
+}
+
+jogador = new Brawler(listaSpawns[0].x, listaSpawns[0].y, personagemSelecionado, "AZUL", true, nicknameJogador);
+registrarParticipantePartida(jogador);
+
+let poolBots = ["ASH", "TRUNK", "COLT", "BARLEY", "ASH", "TRUNK", "COLT", "BARLEY", "COLT"];
+for (let i = 1; i <= 9; i++) {
+  let sp = listaSpawns[i];
+  let bot = new Brawler(sp.x, sp.y, poolBots[i - 1], "BOT" + i, false);
+  inimigos.push(bot);
+  registrarParticipantePartida(bot);
+}
 
     if (mapaCombateHost) {
       for (let o of (mapaCombateHost.obstaculos || [])) {
