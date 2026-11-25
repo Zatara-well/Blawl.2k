@@ -4353,9 +4353,32 @@ function brawlerEstaNaMoita(b) {
   return false;
 }
 
+function destruirMoitasNoPonto(px, py, raioImpacto = 18) {
+  for (let i = moitas.length - 1; i >= 0; i--) {
+    let m = moitas[i];
+    let maisProxX = constrain(px, m.x, m.x + m.w);
+    let maisProxY = constrain(py, m.y, m.y + m.h);
+    if (dist(px, py, maisProxX, maisProxY) <= raioImpacto) {
+      for (let k = 0; k < 8; k++) {
+        particulas.push({
+          x: m.x + m.w / 2 + random(-14, 14),
+          y: m.y + m.h / 2 + random(-14, 14),
+          vx: random(-3.5, 3.5),
+          vy: random(-3.5, 3.5),
+          tam: random(5, 10),
+          cor: random() > 0.4 ? color(68, 198, 62, 230) : color(36, 138, 42, 230),
+          vida: 22
+        });
+      }
+      moitas.splice(i, 1);
+    }
+  }
+}
+
 function inimigoReveladoNaMoita(b) {
   if (!brawlerEstaNaMoita(b)) return true;
   if (b.estaAtacandoAgora()) return true;
+  if (b.timerReveladoMoita > 0) return true;
   if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === b) return true;
 
   let visaoAliada = [jogador, ...aliados, ...ratosAsh.filter((r) => r.time === jogador.time)];
@@ -4366,6 +4389,29 @@ function inimigoReveladoNaMoita(b) {
   }
   return false;
 }
+
+function botConsegueVerAlvo(bot, alvo) {
+  if (!alvo || alvo.vida <= 0) return false;
+  if (alvo instanceof RatoAsh) return true;
+  if (!brawlerEstaNaMoita(alvo)) return true;
+  if (alvo.estaAtacandoAgora()) return true;
+  if (alvo.timerReveladoMoita > 0) return true;
+  if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === alvo) return true;
+
+  let equipeBot = bot.time === "AZUL" ? [jogador, ...aliados] : inimigos;
+  for (let ali of equipeBot) {
+    if (ali && ali.vida > 0 && dist(alvo.x, alvo.y, ali.x, ali.y) < 125) {
+      return true;
+    }
+  }
+  for (let rt of ratosAsh) {
+    if (rt.time === bot.time && rt.vida > 0 && dist(alvo.x, alvo.y, rt.x, rt.y) < 125) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function obterCirculosRespawnGol(time) {
   let meioX = mundoLargura / 2;
   let yPos = time === "AZUL" ? mundoAltura - 62 : 62;
@@ -5660,6 +5706,11 @@ class Brawler {
     this.delaySuperBot = Math.floor(random(20, 45));
     this.zonaPreferidaY = y;
     this.tempoComBola = 0;
+    this.timerReveladoMoita = 0;
+    this.alvoInvestigacaoMoita = null;
+    this.timerInvestigacaoMoita = 0;
+    this.tirosInvestigacaoRestantes = 0;
+    this.emEmboscada = false;
     ////////////////////////////////////////
     // vida maxima velocidade e dano base!//
     ////////////////////////////////////////
@@ -5692,8 +5743,9 @@ class Brawler {
   }
 
   estaAtacandoAgora() {
-    if (this.cooldownAtaque > 0) return true;
+    if (this.cooldownAtaque > 0 || this.animAtaque > 0.05) return true;
     if (this.delayAtaqueTrunk > 0 || this.giroTrunk > 0) return true;
+    if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) return true;
     if (this.dashTimer > 0) return true;
     return false;
   }
@@ -5803,6 +5855,9 @@ class Brawler {
   receberDano(qtd, corTexto = color(255, 255, 255), ehCritico = false, atacante = null) {
     if (this.vida <= 0) return;
     if (this.escudoRespawn && this.escudoRespawn > 0) return;
+    if (brawlerEstaNaMoita(this)) {
+      this.timerReveladoMoita = 60;
+    }
     let danoReal = min(this.vida, qtd);
     this.vida -= qtd;
     this.tempoSemDano = 0;
@@ -5963,6 +6018,7 @@ class Brawler {
   }
 
   atualizar() {
+    if (this.timerReveladoMoita > 0) this.timerReveladoMoita--;
     if (this.escudoRespawn && this.escudoRespawn > 0) {
       this.escudoRespawn--;
       if (this.estaAtacandoAgora()) this.escudoRespawn = 0; // Atirar cancela o escudo
@@ -6669,11 +6725,25 @@ class Brawler {
     for (let b of todosBrawlers) {
       if (b !== this && b.time !== this.time && b.vida > 0) {
         let d = dist(this.x, this.y, b.x, b.y);
-        // Prioriza brawlers com pouca vida ou portadores da bola
-        let bonusPrioridade = (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === b) ? -140 : 0;
-        if (d + bonusPrioridade < menorPontuacao) {
-          menorPontuacao = d + bonusPrioridade;
-          melhorAlvo = b;
+        let visivel = botConsegueVerAlvo(this, b);
+
+        if (visivel) {
+          if (d < 460) {
+            this.alvoInvestigacaoMoita = { x: b.x, y: b.y, ref: b };
+            this.timerInvestigacaoMoita = 160;
+            this.tirosInvestigacaoRestantes = (this.tipo === "COLT" || this.tipo === "BARLEY") ? 2 : 0;
+          }
+
+          let bonusPrioridade = (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === b) ? -140 : 0;
+          if (d + bonusPrioridade < menorPontuacao) {
+            menorPontuacao = d + bonusPrioridade;
+            melhorAlvo = b;
+          }
+        } else if (this.alvoInvestigacaoMoita && this.alvoInvestigacaoMoita.ref === b && this.timerInvestigacaoMoita > 0) {
+          if (this.timerInvestigacaoMoita > 125) {
+            this.alvoInvestigacaoMoita.x = b.x;
+            this.alvoInvestigacaoMoita.y = b.y;
+          }
         }
       }
     }
@@ -6682,7 +6752,6 @@ class Brawler {
       for (let rt of ratosAsh) {
         if (rt.time !== this.time && rt.vida > 0) {
           let dRato = dist(this.x, this.y, rt.x, rt.y);
-          // Ignora o rato se houver um brawler inimigo próximo (menos de 210px) ou se o rato estiver longe
           let brawlerPerto = melhorAlvo && dist(this.x, this.y, melhorAlvo.x, melhorAlvo.y) < 210;
           if (!brawlerPerto && dRato < 240 && dRato + 45 < menorPontuacao) {
             menorPontuacao = dRato + 45;
@@ -6695,6 +6764,101 @@ class Brawler {
     return melhorAlvo;
   }
 
+  tentarEmboscadaNaMoita(todosInimigos) {
+    if (this.tipo !== "ASH" && this.tipo !== "TRUNK") {
+      this.emEmboscada = false;
+      return false;
+    }
+    if (!brawlerEstaNaMoita(this) || this.vida < this.vidaMax * 0.45) {
+      this.emEmboscada = false;
+      return false;
+    }
+    if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === this) {
+      this.emEmboscada = false;
+      return false;
+    }
+
+    let vitimaProxima = null;
+    let menorD = Infinity;
+    for (let ini of todosInimigos) {
+      if (ini && ini.time !== this.time && ini.vida > 0) {
+        let d = dist(this.x, this.y, ini.x, ini.y);
+        if (d < 230 && d < menorD) {
+          menorD = d;
+          vitimaProxima = ini;
+        }
+      }
+    }
+
+    if (!vitimaProxima) {
+      this.emEmboscada = false;
+      return false;
+    }
+
+    let alcanceBote = this.tipo === "ASH" ? 128 : 105;
+    if (menorD > alcanceBote) {
+      this.emEmboscada = true;
+      this.vxAtual = 0;
+      this.vyAtual = 0;
+      this.angulo = atan2(vitimaProxima.y - this.y, vitimaProxima.x - this.x);
+      return true;
+    }
+
+    this.emEmboscada = false;
+    return false;
+  }
+
+  executarInvestigacaoMoita() {
+    if (!this.alvoInvestigacaoMoita || this.timerInvestigacaoMoita <= 0) {
+      this.alvoInvestigacaoMoita = null;
+      return false;
+    }
+
+    this.timerInvestigacaoMoita--;
+    let ponto = this.alvoInvestigacaoMoita;
+
+    if (ponto.ref && ponto.ref.vida > 0 && botConsegueVerAlvo(this, ponto.ref)) {
+      this.alvoInvestigacaoMoita = null;
+      this.timerInvestigacaoMoita = 0;
+      return false;
+    }
+
+    let dPonto = dist(this.x, this.y, ponto.x, ponto.y);
+    let angPonto = atan2(ponto.y - this.y, ponto.x - this.x);
+    let ehCurtoAlcance = this.tipo === "ASH" || this.tipo === "TRUNK";
+
+    if (ehCurtoAlcance) {
+      this.navegarPara(ponto.x, ponto.y, 0.96);
+      this.angulo = angPonto;
+      if (dPonto < 45) {
+        this.alvoInvestigacaoMoita = null;
+        this.timerInvestigacaoMoita = 0;
+      }
+      return true;
+    } else {
+      let alcanceTiro = this.tipo === "BARLEY" ? 265 : 320;
+      if (dPonto > alcanceTiro) {
+        this.navegarPara(ponto.x, ponto.y, 0.88);
+        this.angulo = angPonto;
+        return true;
+      }
+
+      if (this.tirosInvestigacaoRestantes > 0) {
+        if (this.municao >= 1 && this.cooldownAtaque <= 0) {
+          this.angulo = angPonto + random(-0.18, 0.18);
+          this.atacar();
+          this.tirosInvestigacaoRestantes--;
+        }
+        return true;
+      } else if (this.cooldownAtaque <= 0 && (!this.filaDisparosColt || this.filaDisparosColt.length === 0)) {
+        this.alvoInvestigacaoMoita = null;
+        this.timerInvestigacaoMoita = 0;
+        return false;
+      }
+      return true;
+    }
+  }
+
   iaCombate(todos) {
     let alvo = this.obterMelhorAlvoBot(todos, true);
     let menorDist = alvo ? dist(this.x, this.y, alvo.x, alvo.y) : Infinity;
@@ -6704,8 +6868,18 @@ class Brawler {
     let distCentro = dist(this.x, this.y, centroX, centroY);
 
     if (distCentro > venenoRaio - 90) {
+      this.emEmboscada = false;
+      this.alvoInvestigacaoMoita = null;
       let angCentro = this.navegarPara(centroX, centroY, 1.0);
       this.angulo = angCentro;
+      return;
+    }
+
+    if (this.tentarEmboscadaNaMoita(todos)) {
+      return;
+    }
+
+    if (!alvo && this.executarInvestigacaoMoita()) {
       return;
     }
 
@@ -6831,7 +7005,7 @@ class Brawler {
     let brawlerMaisPerto = null;
     let menorDistBrawler = Infinity;
     for (let ini of meusInimigos) {
-      if (ini.vida > 0) {
+      if (ini.vida > 0 && botConsegueVerAlvo(this, ini)) {
         let d = dist(this.x, this.y, ini.x, ini.y);
         if (d < menorDistBrawler) {
           menorDistBrawler = d;
@@ -6840,14 +7014,13 @@ class Brawler {
       }
     }
 
-    // 1. ESTÁ COM A BOLA: Leva para o gol ou chuta para o lado se aparecer inimigo para matá-lo
     if (bolaObj.posse === this) {
+      this.emEmboscada = false;
       this.tempoComBola++;
       let alvoGolX = meioX + constrain((this.x - meioX) * 0.45, -75, 75);
       let angGol = atan2(golInimigoY - this.y, alvoGolX - this.x);
       let distParaGol = dist(this.x, this.y, alvoGolX, golInimigoY);
 
-      // Chuta para o gol se estiver perto e livre
       if (this.superCarga >= 100 && distParaGol < 395 && this.temLinhaDeVisao(alvoGolX, golInimigoY)) {
         this.angulo = angGol;
         this.usarSuper();
@@ -6859,7 +7032,6 @@ class Brawler {
         return;
       }
 
-      // Se aparecer um inimigo perto (e o bot não estiver na cara do gol), joga a bola para o lado para lutar
       if (brawlerMaisPerto && menorDistBrawler < 215 && distParaGol > 175) {
         let angParaIni = atan2(brawlerMaisPerto.y - this.y, brawlerMaisPerto.x - this.x);
         let ladoLivre = this.x > meioX ? -1 : 1;
@@ -6875,7 +7047,14 @@ class Brawler {
     }
     this.tempoComBola = 0;
 
-    // 2. SEM A BOLA: Sai da base para caçar inimigos ou buscar a bola
+    if (dist(this.x, this.y, bolaObj.x, bolaObj.y) > 160 && this.tentarEmboscadaNaMoita(meusInimigos)) {
+      return;
+    }
+
+    if (!maisPerto && this.executarInvestigacaoMoita()) {
+      return;
+    }
+
     let ehCurtoAlcance = this.tipo === "ASH" || this.tipo === "TRUNK";
     let alvoCombate = maisPerto;
     let distAlvo = menorD;
@@ -6884,12 +7063,10 @@ class Brawler {
     let destY = bolaObj.y;
     let usouMovimentoCurtoAlcance = false;
 
-    // Se houver um inimigo em campo (fora do respawn), sai da base para engajar ou disputar a bola
     if (alvoCombate && distAlvo < 620) {
       let alcanceIdeal = this.tipo === "COLT" ? 250 : (this.tipo === "BARLEY" ? 225 : 85);
       let angIni = atan2(alvoCombate.y - this.y, alvoCombate.x - this.x);
 
-      // Se a bola estiver livre e mais perto que o inimigo, vai pegar a bola primeiro
       let distBola = dist(this.x, this.y, bolaObj.x, bolaObj.y);
       if (!bolaObj.posse && distBola < distAlvo * 0.85 && distBola < 260) {
         destX = bolaObj.x;
@@ -6909,23 +7086,19 @@ class Brawler {
         destY = this.y + sin(angStrafe) * 90;
       }
     } else if (!bolaObj.posse) {
-      // Nenhum inimigo por perto: vai pegar a bola
       destX = bolaObj.x;
       destY = bolaObj.y;
     } else if (bolaObj.posse && bolaObj.posse.time === this.time) {
-      // Aliado com a bola: avança pelo campo dando suporte ofensivo
       let avancoY = this.time === "AZUL" ? -160 : 160;
       destX = constrain((this.zonaPreferidaX || meioX) + sin(frameCount * 0.04) * 60, 100, mundoLargura - 100);
       destY = constrain(bolaObj.posse.y + avancoY, 170, mundoAltura - 170);
     } else {
-      // Patrulha avançada no meio do campo (nunca fica parado na base)
       destX = meioX + sin(frameCount * 0.03 + this.raio) * 180;
       destY = meioY + (this.time === "AZUL" ? -40 : 40);
     }
 
     let angMov = usouMovimentoCurtoAlcance ? this.angulo : this.navegarPara(destX, destY, 0.96);
 
-    // 3. COMBATE E DISPAROS CONTRA ALVO (BRAWLER OU RATO)
     if (alvoCombate && distAlvo < 400) {
       let angIni = atan2(alvoCombate.y - this.y, alvoCombate.x - this.x);
       let temVisao = this.tipo === "BARLEY" ? true : this.temLinhaDeVisao(alvoCombate.x, alvoCombate.y);
@@ -8090,7 +8263,9 @@ class Projetil {
         }
       }
     }
-
+   if (this.estilo === "COLT_SUPER") {
+      destruirMoitasNoPonto(nx, ny, this.raio + 10);
+    }
     this.x = nx;
     this.y = ny;
 
