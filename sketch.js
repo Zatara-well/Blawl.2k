@@ -7479,14 +7479,17 @@ class Brawler {
 // OBSTÁCULOS
 // ==========================================
 class Obstaculo {
-  constructor(x, y, w, h) {
+  constructor(x, y, w, h, indestrutivel = false) {
     this.x = x;
     this.y = y;
     this.w = w;
     this.h = h;
+    this.indestrutivel = indestrutivel;
   }
 
   desenhar() {
+    if (this.indestrutivel) return; // Parede invisível
+
     noStroke();
     fill(0, 0, 0, 75);
     rect(this.x + 6, this.y + 8, this.w, this.h, 10);
