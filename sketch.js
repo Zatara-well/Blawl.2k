@@ -2877,8 +2877,8 @@ function pontoValidoNoEditor(gx, gy, larg, alt) {
     return gx >= 50 && gx <= larg - 100 && gy >= 50 && gy <= alt - 100;
   }
 
-  let golEsq = larg / 2 - 125;
-  let golDir = larg / 2 + 125;
+  let golEsq = larg / 2 - 150;
+  let golDir = larg / 2 + 150;
   let dentroCampoPrincipal = gx >= 50 && gx <= larg - 100 && gy >= 150 && gy <= alt - 200;
   let dentroGolCima = gx >= golEsq && gx <= golDir - 50 && gy >= 50 && gy < 150;
   let dentroGolBaixo = gx >= golEsq && gx <= golDir - 50 && gy > alt - 200 && gy <= alt - 100;
@@ -2984,11 +2984,11 @@ function desenharMapMaker() {
 
     fill(255, 60, 60, 130);
     stroke(255, 180, 180);
-    rect(golEsq, 35, 250, 100, 4);
+    rect(golEsq, 35, 300, 100, 4);
 
     fill(0, 160, 255, 130);
     stroke(150, 230, 255);
-    rect(golEsq, alt - 135, 250, 100, 4);
+    rect(golEsq, alt - 135, 300, 100, 4);
   } else {
     noFill();
     stroke(255, 220, 60, 180);
@@ -3997,8 +3997,8 @@ function atualizarJogo() {
   }
 }
 function circuloForaCampoFutebrawl(cx, cy, raio) {
-  let golEsq = mundoLargura / 2 - 125;
-  let golDir = mundoLargura / 2 + 125;
+  let golEsq = mundoLargura / 2 - 150;
+  let golDir = mundoLargura / 2 + 150;
 
   if (cx < 50 + raio || cx > mundoLargura - 50 - raio) return true;
 
@@ -4471,8 +4471,8 @@ function desenharJogo() {
 
     let meioX = mundoLargura / 2;
     let meioY = mundoAltura / 2;
-    let golEsq = meioX - 125;
-    let golDir = meioX + 125;
+    let golEsq = meioX - 150;
+    let golDir = meioX + 150;
 
     // Área externa escura ao redor do estádio (igual ao Brawl Stars)
     fill(20, 78, 36);
@@ -4483,8 +4483,8 @@ function desenharJogo() {
 
     // Gramado interno dos dois gols recuados
     fill(35, 138, 58);
-    rect(golEsq, 35, 250, 100);
-    rect(golEsq, mundoAltura - 135, 250, 100);
+    rect(golEsq, 35, 300, 100);
+    rect(golEsq, mundoAltura - 135, 300, 100);
 
     // Linhas brancas do campo
     stroke(255, 255, 255, 135);
@@ -4507,13 +4507,13 @@ function desenharJogo() {
     fill(255, 60, 60, 125);
     stroke(255, 150, 150);
     strokeWeight(4);
-    rect(golEsq, 35, 250, 100, 6);
+    rect(golEsq, 35, 300, 100, 6);
 
     // Gol Azul (Baixo)
     fill(0, 160, 255, 125);
     stroke(140, 225, 255);
     strokeWeight(4);
-    rect(golEsq, mundoAltura - 135, 250, 100, 6);
+    rect(golEsq, mundoAltura - 135, 300, 100, 6);
 
     // Linha tracejada na entrada dos dois gols (igual da imagem)
     stroke(255, 255, 255, 210);
@@ -5709,6 +5709,8 @@ class Brawler {
     this.timerInvestigacaoMoita = 0;
     this.tirosInvestigacaoRestantes = 0;
     this.emEmboscada = false;
+    this.timerRecuoParede = 0;
+    this.anguloRecuoParede = 0;
     ////////////////////////////////////////
     // vida maxima velocidade e dano base!//
     ////////////////////////////////////////
@@ -5860,8 +5862,13 @@ class Brawler {
     this.vida -= qtd;
     this.tempoSemDano = 0;
 
-    if (atacante && atacante !== this) {
+   if (atacante && atacante !== this) {
       atacante.danoCausado = (atacante.danoCausado || 0) + danoReal;
+      // Se for bot e tomou dano estando atrás de uma parede (ex: ataque do Barley), recua como um humano
+      if (!this.ehJogador && this.vida > 0 && !this.temLinhaDeVisao(atacante.x, atacante.y)) {
+        this.timerRecuoParede = 60;
+        this.anguloRecuoParede = atan2(this.y - atacante.y, this.x - atacante.x);
+      }
     }
 
     if (this.vida <= 0) {
@@ -6380,8 +6387,29 @@ class Brawler {
       }
     }
   }
+  estaDentroDoGol() {
+    if (modoSelecionado !== "FUTEBRAWL") return false;
+    return this.y < 142 || this.y > mundoAltura - 142;
+  }
 
+  linhaTiroBateParedeGol(tx, ty) {
+    if (modoSelecionado !== "FUTEBRAWL") return false;
+    let golEsq = mundoLargura / 2 - 150;
+    let golDir = mundoLargura / 2 + 150;
+    let passos = 10;
+    for (let i = 1; i <= passos; i++) {
+      let t = i / passos;
+      let px = lerp(this.x, tx, t);
+      let py = lerp(this.y, ty, t);
+      if ((py < 135 || py > mundoAltura - 135) && (px < golEsq || px > golDir)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
   temLinhaDeVisao(tx, ty) {
+    if (this.linhaTiroBateParedeGol(tx, ty)) return false;
     let passos = 8;
     for (let i = 1; i < passos; i++) {
       let t = i / passos;
@@ -6405,34 +6433,38 @@ class Brawler {
       angDesejado = this.anguloDesvio;
     }
 
-    let passoTeste = velAtual * 4.5;
+    let passoTeste = velAtual * 6.5;
     let testeX = this.x + cos(angDesejado) * passoTeste;
     let testeY = this.y + sin(angDesejado) * passoTeste;
+    let bateuParede = this.colideObstaculo(testeX, testeY) ||
+      (modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(testeX, testeY, this.raio));
 
-    if (this.colideObstaculo(testeX, testeY)) {
-      let angEsquerda = angDesejado - HALF_PI * 0.85;
-      let angDireita = angDesejado + HALF_PI * 0.85;
-      let livreEsq = !this.colideObstaculo(this.x + cos(angEsquerda) * passoTeste, this.y + sin(angEsquerda) * passoTeste);
-      let livreDir = !this.colideObstaculo(this.x + cos(angDireita) * passoTeste, this.y + sin(angDireita) * passoTeste);
-
-      if (livreEsq && !livreDir) {
-        this.anguloDesvio = angEsquerda;
-      } else if (livreDir && !livreEsq) {
-        this.anguloDesvio = angDireita;
-      } else {
-        this.anguloDesvio = angDesejado + this.ladoContornoBot * HALF_PI * 0.85;
+    if (bateuParede) {
+      let offsets = [0.65, -0.65, 1.15, -1.15, 1.57, -1.57, 2.1, -2.1];
+      let melhorAng = angDesejado + this.ladoContornoBot * HALF_PI;
+      for (let off of offsets) {
+        let cand = angDesejado + off * this.ladoContornoBot;
+        let cx = this.x + cos(cand) * passoTeste;
+        let cy = this.y + sin(cand) * passoTeste;
+        let livre = !this.colideObstaculo(cx, cy) &&
+          !(modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(cx, cy, this.raio));
+        if (livre) {
+          melhorAng = cand;
+          break;
+        }
       }
-      this.desvioTimer = 18;
+      this.anguloDesvio = melhorAng;
+      this.desvioTimer = 20;
       angDesejado = this.anguloDesvio;
     }
 
     let moveu = this.aplicarMovimento(cos(angDesejado) * velAtual * velocidadeFator, sin(angDesejado) * velAtual * velocidadeFator);
-    if (moveu < 0.4) {
+    if (moveu < 0.45) {
       this.framesPreso++;
-      if (this.framesPreso > 10) {
+      if (this.framesPreso > 8) {
         this.ladoContornoBot *= -1;
-        this.anguloDesvio = angDesejado + this.ladoContornoBot * (PI * 0.65);
-        this.desvioTimer = 25;
+        this.anguloDesvio = angDesejado + this.ladoContornoBot * (PI * 0.72);
+        this.desvioTimer = 26;
         this.framesPreso = 0;
       }
     } else {
@@ -6872,6 +6904,17 @@ class Brawler {
       this.angulo = angCentro;
       return;
     }
+    // Se tomou dano atrás da parede (ex: ataque do Barley), recua como um humano
+    if (this.timerRecuoParede > 0) {
+      this.timerRecuoParede--;
+      let trunkPodeAcertar = this.tipo === "TRUNK" && alvo && dist(this.x, this.y, alvo.x, alvo.y) <= 112;
+      if (!trunkPodeAcertar) {
+        let rx = constrain(this.x + cos(this.anguloRecuoParede) * 140, 60, mundoLargura - 60);
+        let ry = constrain(this.y + sin(this.anguloRecuoParede) * 140, 80, mundoAltura - 60);
+        this.angulo = this.navegarPara(rx, ry, 1.0);
+        return;
+      }
+    }
 
     if (this.tentarEmboscadaNaMoita(todos)) {
       return;
@@ -7011,6 +7054,29 @@ class Brawler {
         }
       }
     }
+    // 1. Se tomou dano atrás da parede, recua como um humano (exceto Trunk se alcançar o Barley na parede)
+    if (this.timerRecuoParede > 0) {
+      this.timerRecuoParede--;
+      let trunkPodeAcertar = this.tipo === "TRUNK" && maisPerto && dist(this.x, this.y, maisPerto.x, maisPerto.y) <= 112;
+      if (!trunkPodeAcertar) {
+        let rx = constrain(this.x + cos(this.anguloRecuoParede) * 140, 70, mundoLargura - 70);
+        let ry = constrain(this.y + sin(this.anguloRecuoParede) * 140, 155, mundoAltura - 155);
+        this.angulo = this.navegarPara(rx, ry, 1.0);
+        return;
+      }
+    }
+
+    // 2. Barreira invisível de comportamento no gol: só o Barley pode ficar no gol se estiver atacando;
+    // todos os outros bots (e o Barley sem alvo) saem imediatamente do gol e nunca ficam parados/girando lá dentro.
+    if (this.estaDentroDoGol() && bolaObj.posse !== this) {
+      let barleyComAlvo = this.tipo === "BARLEY" && maisPerto && menorD <= 275;
+      if (!barleyComAlvo) {
+        let saidaY = this.y < meioY ? 220 : mundoAltura - 220;
+        let saidaX = constrain(this.x, meioX - 110, meioX + 110);
+        this.angulo = this.navegarPara(saidaX, saidaY, 1.0);
+        return;
+      }
+    }
 
     if (bolaObj.posse === this) {
       this.emEmboscada = false;
@@ -7069,10 +7135,14 @@ class Brawler {
       if (!bolaObj.posse && distBola < distAlvo * 0.85 && distBola < 260) {
         destX = bolaObj.x;
         destY = bolaObj.y;
-      } else if (this.tipo === "BARLEY") {
+     } else if (this.tipo === "BARLEY") {
         this.moverBarleyTatico(alvoCombate, distAlvo, false);
         usouMovimentoCurtoAlcance = true;
-      } else if (ehCurtoAlcance && this.temLinhaDeVisao(alvoCombate.x, alvoCombate.y)) {
+      } else if (!this.temLinhaDeVisao(alvoCombate.x, alvoCombate.y) && !(this.tipo === "TRUNK" && distAlvo <= 112)) {
+        // Alvo está atrás da parede: rodeia a parede até abrir linha de visão
+        destX = alvoCombate.x;
+        destY = alvoCombate.y;
+      } else if (ehCurtoAlcance) {
         this.aproximarCurtoAlcance(alvoCombate, distAlvo);
         usouMovimentoCurtoAlcance = true;
       } else if (distAlvo > alcanceIdeal) {
@@ -7118,9 +7188,10 @@ class Brawler {
         return;
       }
 
+      let bloqueadoNoGol = this.estaDentroDoGol() && this.tipo !== "BARLEY";
       let alcanceDisparo = this.tipo === "ASH" ? 140 : (this.tipo === "TRUNK" ? 115 : (this.tipo === "BARLEY" ? 275 : 325));
 
-      if (distAlvo <= alcanceDisparo && temVisao) {
+      if (!bloqueadoNoGol && distAlvo <= alcanceDisparo && temVisao) {
         if (this.tipo === "BARLEY") {
           this.angulo = this.calcularAlvoPreditivoBarley(alvoCombate).angulo;
         } else if (this.tipo === "COLT") {
@@ -7784,29 +7855,29 @@ class RatoAsh {
         angDesejado = this.anguloDesvio;
       }
 
-      let passoTeste = this.velocidade * 4;
+      let passoTeste = this.velocidade * 6;
       let tx = this.x + cos(angDesejado) * passoTeste;
       let ty = this.y + sin(angDesejado) * passoTeste;
 
       if (circuloColideObstaculo(tx, ty, this.raio)) {
-        let angEsq = angDesejado - HALF_PI * 0.85;
-        let angDir = angDesejado + HALF_PI * 0.85;
-        let livreEsq = !circuloColideObstaculo(this.x + cos(angEsq) * passoTeste, this.y + sin(angEsq) * passoTeste, this.raio);
-        let livreDir = !circuloColideObstaculo(this.x + cos(angDir) * passoTeste, this.y + sin(angDir) * passoTeste, this.raio);
-
-        if (livreEsq && !livreDir) {
-          this.anguloDesvio = angEsq;
-        } else if (livreDir && !livreEsq) {
-          this.anguloDesvio = angDir;
-        } else {
-          this.anguloDesvio = angDesejado + this.ladoDesvio * HALF_PI * 0.85;
+        let offsets = [0.6, -0.6, 1.1, -1.1, 1.57, -1.57, 2.2, -2.2];
+        let melhorAng = angDesejado + this.ladoDesvio * HALF_PI;
+        for (let off of offsets) {
+          let cand = angDesejado + off * this.ladoDesvio;
+          if (!circuloColideObstaculo(this.x + cos(cand) * passoTeste, this.y + sin(cand) * passoTeste, this.raio)) {
+            melhorAng = cand;
+            break;
+          }
         }
-        this.desvioTimer = 14;
+        this.anguloDesvio = melhorAng;
+        this.desvioTimer = 18;
         angDesejado = this.anguloDesvio;
       }
 
       this.angulo = angDesejado;
 
+      let antesX = this.x;
+      let antesY = this.y;
       let nx = constrain(this.x + cos(this.angulo) * this.velocidade, 28, mundoLargura - 28);
       if (!circuloColideObstaculo(nx, this.y, this.raio)) {
         this.x = nx;
@@ -7814,6 +7885,18 @@ class RatoAsh {
       let ny = constrain(this.y + sin(this.angulo) * this.velocidade, 56, mundoAltura - 28);
       if (!circuloColideObstaculo(this.x, ny, this.raio)) {
         this.y = ny;
+      }
+
+      if (dist(antesX, antesY, this.x, this.y) < 0.5) {
+        this.framesPresoRato = (this.framesPresoRato || 0) + 1;
+        if (this.framesPresoRato > 8) {
+          this.ladoDesvio *= -1;
+          this.anguloDesvio = angDesejado + this.ladoDesvio * (PI * 0.7);
+          this.desvioTimer = 22;
+          this.framesPresoRato = 0;
+        }
+      } else {
+        this.framesPresoRato = 0;
       }
 
       for (let b of todos) {
@@ -7977,11 +8060,29 @@ class GarrafaBarley {
     this.y = lerp(this.yOrigem, this.yAlvo, t);
     this.altura = sin(t * PI) * (this.ehSuper ? 105 : 75);
     this.rotacao += 0.34;
-
+    
     if (t >= 1) {
       this.finalizada = true;
       let raioPoca = this.ehSuper ? 78 : 58;
       pocas.push(new PocaBarley(this.xAlvo, this.yAlvo, raioPoca, this.danoTick, this.time, this.dono, this.ehSuper));
+
+      // Dano imediato no momento em que a garrafa cai no brawler
+      for (let b of todos) {
+        if (b.time !== this.time && b.vida > 0) {
+          if (dist(this.xAlvo, this.yAlvo, b.x, b.y) <= raioPoca + b.raio * 0.65) {
+            b.receberDano(this.danoTick, color(215, 120, 255), false, this.dono);
+            if (this.dono && this.dono.vida > 0) {
+              this.dono.superCarga = min(100, this.dono.superCarga + (this.ehSuper ? 4.5 : 10));
+            }
+          }
+        }
+      }
+      for (let rt of ratosAsh) {
+        if (rt.time !== this.time && rt.vida > 0) {
+          if (dist(this.xAlvo, this.yAlvo, rt.x, rt.y) <= raioPoca + rt.raio * 0.65) {
+            rt.receberDano(this.danoTick, this.dono);
+          }
+        }
 
       let ehAliado = this.time === "AZUL";
       for (let k = 0; k < 10; k++) {
