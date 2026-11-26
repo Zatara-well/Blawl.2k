@@ -2956,8 +2956,8 @@ function desenharMapMaker() {
   for (let y = 0; y <= alt; y += GRADE_EDITOR) line(0, y, larg, y);
 
   if (editorMapa.modoBase === "FUTEBRAWL") {
-    let golEsq = larg / 2 - 125;
-    let golDir = larg / 2 + 125;
+    let golEsq = larg / 2 - 150;
+    let golDir = larg / 2 + 150;
 
     noFill();
     stroke(255, 220, 60, 190);
@@ -8083,6 +8083,7 @@ class GarrafaBarley {
             rt.receberDano(this.danoTick, this.dono);
           }
         }
+      }
 
       let ehAliado = this.time === "AZUL";
       for (let k = 0; k < 10; k++) {
