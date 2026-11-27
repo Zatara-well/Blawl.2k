@@ -8911,8 +8911,8 @@ function temLinhaDeVisao(x1, y1, x2, y2) {
     let t = i / passos;
     let px = lerp(x1, x2, t);
     let py = lerp(y1, y2, t);
-    for (let p of paredes) {
-      if (px >= p.x && px <= p.x + p.w && py >= p.y && py <= p.y + p.h) {
+    for (let o of obstaculos) {
+      if (px >= o.x && px <= o.x + o.w && py >= o.y && py <= o.y + o.h) {
         return false; // Tem parede no meio do caminho
       }
     }
@@ -8939,7 +8939,7 @@ function calcularDirecaoContorno(entidade, alvoX, alvoY) {
     let tx = entidade.x + cos(angTeste) * 90;
     let ty = entidade.y + sin(angTeste) * 90;
 
-    if (!colideComParede(tx, ty, entidade.raio)) {
+    if (!circuloColideObstaculo(tx, ty, entidade.raio)) {
       return angTeste;
     }
   }
