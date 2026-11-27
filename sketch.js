@@ -6357,14 +6357,7 @@ class Brawler {
     if (this.cooldownAtaque > 0) this.cooldownAtaque--;
   }
 
-  atacar() {
-    if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === this) {
-      lancaBolaComAlcance(this, this.angulo, 230, 8.2, false);
-      this.tempoComBola = 0;
-      this.animAtaque = 1.0;
-      return;
-    }
-    atacar(alvoAutoFire = null) {
+  atacar(alvoAutoFire = null) {
     if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === this) {
       lancaBolaComAlcance(this, this.angulo, 230, 8.2, false);
       this.tempoComBola = 0;
@@ -6374,31 +6367,7 @@ class Brawler {
 
     if (this.tipo === "TRUNK" && this.delayAtaqueTrunk > 0) return;
     if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) return;
-    
-    if (this.municao < 1 || this.cooldownAtaque > 0) return;
-    this.municao--;
-    this.cooldownAtaque = this.tipo === "COLT" ? 26 : 18;
-    this.animAtaque = 1.0;
 
-    } else if (this.tipo === "BARLEY") {
-      let alvo;
-      if (alvoAutoFire) {
-        let dAlvo = constrain(dist(this.x, this.y, alvoAutoFire.x, alvoAutoFire.y), 45, 275);
-        alvo = {
-          x: constrain(this.x + cos(this.angulo) * dAlvo, 35, mundoLargura - 35),
-          y: constrain(this.y + sin(this.angulo) * dAlvo, 60, mundoAltura - 35)
-        };
-      } else {
-        alvo = this.calcularAlvoBarley();
-      }
-      let tempoVoo = this.calcularTempoVooBarley(dist(this.x, this.y, alvo.x, alvo.y));
-      garrafas.push(new GarrafaBarley(this.x, this.y, alvo.x, alvo.y, this.danoBase, this.time, this, false, tempoVoo));
-    }
-  }
-
-    if (this.tipo === "TRUNK" && this.delayAtaqueTrunk > 0) return;
-    if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) return;
-    
     if (this.municao < 1 || this.cooldownAtaque > 0) return;
     this.municao--;
     this.cooldownAtaque = this.tipo === "COLT" ? 26 : 18;
@@ -6415,7 +6384,6 @@ class Brawler {
           let d = dist(this.x, this.y, a.x, a.y);
           let angParaAlvo = atan2(a.y - this.y, a.x - this.x);
           let diffAng = abs(atan2(sin(angParaAlvo - this.angulo), cos(angParaAlvo - this.angulo)));
-          // Adicionado && this.temLinhaDeVisao(a.x, a.y) para bloquear atrás de paredes
           if (d < 145 && diffAng < 0.65 && this.temLinhaDeVisao(a.x, a.y)) {
             a.receberDano(danoAsh, furiaAlta ? color(255, 80, 50) : color(255, 255, 255), furiaAlta, this);
             this.superCarga = min(100, this.superCarga + 14.3);
@@ -6429,7 +6397,6 @@ class Brawler {
           let d = dist(this.x, this.y, rt.x, rt.y);
           let angParaAlvo = atan2(rt.y - this.y, rt.x - this.x);
           let diffAng = abs(atan2(sin(angParaAlvo - this.angulo), cos(angParaAlvo - this.angulo)));
-          // Também bloqueia ataque nos ratos através da parede
           if (d < 145 && diffAng < 0.65 && this.temLinhaDeVisao(rt.x, rt.y)) {
             rt.receberDano(danoAsh, this);
           }
@@ -6453,7 +6420,6 @@ class Brawler {
         vidaMax: 26
       });
 
-      // Partículas distribuídas apenas até onde o golpe alcançou (não atravessa parede)
       let qtdParticulas = Math.max(3, Math.floor(alcanceVisual / 16));
       for (let k = 0; k < qtdParticulas; k++) {
         let angPart = this.angulo + random(-0.28, 0.28);
@@ -6469,7 +6435,6 @@ class Brawler {
         });
       }
 
-      // Faíscas extra se a vassoura bater na parede
       if (alcanceVisual < 125) {
         let impX = this.x + cos(this.angulo) * (alcanceVisual + 16);
         let impY = this.y + sin(this.angulo) * (alcanceVisual + 16);
@@ -6484,16 +6449,15 @@ class Brawler {
             vida: 14
           });
         }
+      }
     } else if (this.tipo === "TRUNK") {
       this.delayAtaqueTrunk = 30;
-
-     } else if (this.tipo === "COLT") {
+    } else if (this.tipo === "COLT") {
       this.anguloAtaqueTravado = this.angulo;
       this.filaDisparosColt = [];
       this.ladoPistolaColt *= -1;
       let inicio = this.ladoPistolaColt;
 
-      // Dispara a 1ª bala imediatamente
       this.dispararBalaColt({
         offsetLateral: inicio * 6,
         vel: 11.5,
@@ -6503,7 +6467,6 @@ class Brawler {
         ehSuper: false
       });
 
-      // Enfileira as outras 5 balas (alternando esquerda/direita a cada 3 frames)
       for (let i = 1; i < 6; i++) {
         let lado = (i % 2 === 0 ? inicio : -inicio) * 6;
         this.filaDisparosColt.push({
@@ -6517,7 +6480,16 @@ class Brawler {
         });
       }
     } else if (this.tipo === "BARLEY") {
-      let alvo = this.calcularAlvoBarley();
+      let alvo;
+      if (alvoAutoFire) {
+        let dAlvo = constrain(dist(this.x, this.y, alvoAutoFire.x, alvoAutoFire.y), 45, 275);
+        alvo = {
+          x: constrain(this.x + cos(this.angulo) * dAlvo, 35, mundoLargura - 35),
+          y: constrain(this.y + sin(this.angulo) * dAlvo, 60, mundoAltura - 35)
+        };
+      } else {
+        alvo = this.calcularAlvoBarley();
+      }
       let tempoVoo = this.calcularTempoVooBarley(dist(this.x, this.y, alvo.x, alvo.y));
       garrafas.push(new GarrafaBarley(this.x, this.y, alvo.x, alvo.y, this.danoBase, this.time, this, false, tempoVoo));
     }
@@ -6647,20 +6619,7 @@ class Brawler {
     }
     return true;
   }
-  function calcularAlcanceLivreAsh(x, y, angulo, alcanceMax) {
-  let passo = 6;
-  for (let d = 15; d <= alcanceMax; d += passo) {
-    let px = x + cos(angulo) * d;
-    let py = y + sin(angulo) * d;
-    for (let o of obstaculos) {
-      if (px >= o.x && px <= o.x + o.w && py >= o.y && py <= o.y + o.h) {
-        return max(12, d - passo);
-      }
-    }
-  }
-  return alcanceMax;
-}
-
+  
   navegarPara(tx, ty, velocidadeFator = 1.0) {
     let velAtual = this.calcularVelocidadeAtual();
     let angDesejado = atan2(ty - this.y, tx - this.x);
@@ -9096,4 +9055,18 @@ function calcularDirecaoContorno(entidade, alvoX, alvoY) {
 
   entidade.ladoContorno *= -1;
   return angDireto + radians(90 * entidade.ladoContorno);
+} 
+
+function calcularAlcanceLivreAsh(x, y, angulo, alcanceMax) {
+  let passo = 6;
+  for (let d = 15; d <= alcanceMax; d += passo) {
+    let px = x + cos(angulo) * d;
+    let py = y + sin(angulo) * d;
+    for (let o of obstaculos) {
+      if (px >= o.x && px <= o.x + o.w && py >= o.y && py <= o.y + o.h) {
+        return max(12, d - passo);
+      }
+    }
+  }
+  return alcanceMax;
 }
