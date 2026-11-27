@@ -3535,6 +3535,18 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
   obstaculos = [];
   moitas = [];
 
+  // Paredes invisíveis e indestrutíveis nos lados dos gols (Barley joga por cima)
+  let margemGol = 350; // (1000 - 300) / 2 = 350px de cada lado
+  let profGol = 135;   // Profundidade da área externa do gol
+
+  // Lados do Gol Superior (Vermelho)
+  obstaculos.push(new Obstaculo(0, 0, margemGol, profGol, true));
+  obstaculos.push(new Obstaculo(mundoLargura - margemGol, 0, margemGol, profGol, true));
+
+  // Lados do Gol Inferior (Azul)
+  obstaculos.push(new Obstaculo(0, mundoAltura - profGol, margemGol, profGol, true));
+  obstaculos.push(new Obstaculo(mundoLargura - margemGol, mundoAltura - profGol, margemGol, profGol, true));
+
   let mapaFuteHost = mapasOficiais.FUTEBRAWL;
 
   if (mapaFuteHost) {
@@ -8346,7 +8358,7 @@ class Projetil {
     for (let i = obstaculos.length - 1; i >= 0; i--) {
       let o = obstaculos[i];
       if (nx > o.x && nx < o.x + o.w && ny > o.y && ny < o.y + o.h) {
-        if (this.estilo === "COLT_SUPER") {
+        if (this.estilo === "COLT_SUPER" && !o.indestrutivel) {
           obstaculos.splice(i, 1);
           for (let k = 0; k < 8; k++) {
             particulas.push({
