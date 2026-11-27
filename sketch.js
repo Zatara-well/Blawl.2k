@@ -578,6 +578,9 @@ function setup() {
       if (e.key.toLowerCase() === "j" || e.key.toLowerCase() === "z") {
         jogador.atacar();
       }
+      if (e.key.toLowerCase() === "r") {
+        executarAutoFirePC();
+      }
       if (e.code === "Space" || e.key.toLowerCase() === "e" || e.key.toLowerCase() === "k") {
         e.preventDefault();
         jogador.usarSuper();
@@ -596,6 +599,39 @@ function setup() {
 
 function alternarModoMira() {
   modoMira = modoMira === "ATAQUE" ? "SUPER" : "ATAQUE";
+}
+function executarAutoFirePC() {
+  if (!jogador || jogador.vida <= 0) return;
+
+  // Se estiver com a bola no Fute-Brawl, chuta direto para o gol inimigo
+  if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === jogador) {
+    let golY = jogador.time === "AZUL" ? 125 : mundoAltura - 125;
+    jogador.angulo = atan2(golY - jogador.y, mundoLargura / 2 - jogador.x);
+    jogador.atacar();
+    return;
+  }
+
+  let alvoMaisProximo = null;
+  let menorDist = Infinity;
+
+  for (let ini of inimigos) {
+    if (ini.vida > 0 && inimigoReveladoNaMoita(ini)) {
+      let d = dist(jogador.x, jogador.y, ini.x, ini.y);
+      if (d < menorDist) {
+        menorDist = d;
+        alvoMaisProximo = ini;
+      }
+    }
+  }
+
+  // Se encontrou um inimigo dentro do alcance máximo de auto-fire (480px)
+  if (alvoMaisProximo && menorDist <= 480) {
+    jogador.angulo = atan2(alvoMaisProximo.y - jogador.y, alvoMaisProximo.x - jogador.x);
+    jogador.atacar(alvoMaisProximo);
+  } else {
+    // Se não houver ninguém perto, atira na direção atual
+    jogador.atacar();
+  }
 }
 
 function mouseWheel(event) {
@@ -778,10 +814,10 @@ function desenharMenu() {
   textAlign(CENTER, CENTER);
 
   if (!ehMobile) {
-    fill(165, 205, 255, 210);
-    textAlign(RIGHT, CENTER);
+    fill(255, 230, 100);
     textSize(11);
-    text(modoTelaCheia ? "ESC: Sair Tela Cheia" : "ESC: Tela Cheia", width - 16, 27);
+    textAlign(RIGHT, CENTER);
+    text("WASD: Mover | Esq: Mirar | R: Auto-Fire | Dir/Espaço: Super | ESC: Tela Cheia", width - 15, height - 22);
     textAlign(CENTER, CENTER);
   }
 
@@ -6328,6 +6364,37 @@ class Brawler {
       this.animAtaque = 1.0;
       return;
     }
+    atacar(alvoAutoFire = null) {
+    if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === this) {
+      lancaBolaComAlcance(this, this.angulo, 230, 8.2, false);
+      this.tempoComBola = 0;
+      this.animAtaque = 1.0;
+      return;
+    }
+
+    if (this.tipo === "TRUNK" && this.delayAtaqueTrunk > 0) return;
+    if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) return;
+    
+    if (this.municao < 1 || this.cooldownAtaque > 0) return;
+    this.municao--;
+    this.cooldownAtaque = this.tipo === "COLT" ? 26 : 18;
+    this.animAtaque = 1.0;
+
+    } else if (this.tipo === "BARLEY") {
+      let alvo;
+      if (alvoAutoFire) {
+        let dAlvo = constrain(dist(this.x, this.y, alvoAutoFire.x, alvoAutoFire.y), 45, 275);
+        alvo = {
+          x: constrain(this.x + cos(this.angulo) * dAlvo, 35, mundoLargura - 35),
+          y: constrain(this.y + sin(this.angulo) * dAlvo, 60, mundoAltura - 35)
+        };
+      } else {
+        alvo = this.calcularAlvoBarley();
+      }
+      let tempoVoo = this.calcularTempoVooBarley(dist(this.x, this.y, alvo.x, alvo.y));
+      garrafas.push(new GarrafaBarley(this.x, this.y, alvo.x, alvo.y, this.danoBase, this.time, this, false, tempoVoo));
+    }
+  }
 
     if (this.tipo === "TRUNK" && this.delayAtaqueTrunk > 0) return;
     if (this.tipo === "COLT" && this.filaDisparosColt.length > 0) return;
