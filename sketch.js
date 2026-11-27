@@ -7143,7 +7143,7 @@ class Brawler {
   iaFutebrawl(bolaObj, meusAliados, meusInimigos) {
     let meioX = mundoLargura / 2;
     let meioY = mundoAltura / 2;
-    let golInimigoY = this.time === "AZUL" ? 125 : mundoAltura - 125;
+    let golInimigoY = this.time === "AZUL" ? 155 : mundoAltura - 155;
 
     let maisPerto = this.obterMelhorAlvoBot(meusInimigos, true);
     let menorD = maisPerto ? dist(this.x, this.y, maisPerto.x, maisPerto.y) : Infinity;
@@ -7159,28 +7159,34 @@ class Brawler {
         }
       }
     }
-    // 1. Se tomou dano atrás da parede, recua como um humano (exceto Trunk se alcançar o Barley na parede)
+
+    // 1. Se tomou dano atrás da parede, recua como um humano
     if (this.timerRecuoParede > 0) {
       this.timerRecuoParede--;
       let trunkPodeAcertar = this.tipo === "TRUNK" && maisPerto && dist(this.x, this.y, maisPerto.x, maisPerto.y) <= 112;
       if (!trunkPodeAcertar) {
         let rx = constrain(this.x + cos(this.anguloRecuoParede) * 140, 70, mundoLargura - 70);
-        let ry = constrain(this.y + sin(this.anguloRecuoParede) * 140, 155, mundoAltura - 155);
+        let ry = constrain(this.y + sin(this.anguloRecuoParede) * 140, 195, mundoAltura - 195);
         this.angulo = this.navegarPara(rx, ry, 1.0);
         return;
       }
     }
 
-    // 2. Barreira invisível de comportamento no gol: só o Barley pode ficar no gol se estiver atacando;
-    // todos os outros bots (e o Barley sem alvo) saem imediatamente do gol e nunca ficam parados/girando lá dentro.
-    if (this.estaDentroDoGol() && bolaObj.posse !== this) {
-      let barleyComAlvo = this.tipo === "BARLEY" && maisPerto && menorD <= 275;
-      if (!barleyComAlvo) {
-        let saidaY = this.y < meioY ? 220 : mundoAltura - 220;
-        let saidaX = constrain(this.x, meioX - 110, meioX + 110);
-        this.angulo = this.navegarPara(saidaX, saidaY, 1.0);
-        return;
-      }
+    // 2. Saída decidida da base/gol: usa um timer (timerSaindoBase) para avançar até o campo aberto sem ficar indo e voltando na linha do gol
+    let naZonaBase = this.time === "AZUL" ? (this.y > mundoAltura - 230) : (this.y < 230);
+    let bolaAmeacandoMeuGol = this.time === "AZUL" ? (bolaObj.y > mundoAltura - 320) : (bolaObj.y < 320);
+
+    if (this.estaDentroDoGol() && bolaObj.posse !== this && !bolaAmeacandoMeuGol) {
+      this.timerSaindoBase = 38; // Compromete-se por ~0.6s a sair da base até o meio
+    }
+
+    if (this.timerSaindoBase && this.timerSaindoBase > 0 && bolaObj.posse !== this && !bolaAmeacandoMeuGol) {
+      this.timerSaindoBase--;
+      let saidaY = this.time === "AZUL" ? mundoAltura - 340 : 340;
+      let faixaLateral = (this.indiceSpawnGol === 1) ? -140 : (this.indiceSpawnGol === 2 ? 140 : 0);
+      let saidaX = constrain(meioX + faixaLateral, 120, mundoLargura - 120);
+      this.angulo = this.navegarPara(saidaX, saidaY, 1.0);
+      return;
     }
 
     if (bolaObj.posse === this) {
@@ -7262,12 +7268,12 @@ class Brawler {
       destX = bolaObj.x;
       destY = bolaObj.y;
     } else if (bolaObj.posse && bolaObj.posse.time === this.time) {
-      let avancoY = this.time === "AZUL" ? -160 : 160;
-      destX = constrain((this.zonaPreferidaX || meioX) + sin(frameCount * 0.04) * 60, 100, mundoLargura - 100);
-      destY = constrain(bolaObj.posse.y + avancoY, 170, mundoAltura - 170);
+      let avancoY = this.time === "AZUL" ? -180 : 180;
+      destX = constrain(this.zonaPreferidaX || meioX, 110, mundoLargura - 110);
+      destY = constrain(bolaObj.posse.y + avancoY, 210, mundoAltura - 210);
     } else {
-      destX = meioX + sin(frameCount * 0.03 + this.raio) * 180;
-      destY = meioY + (this.time === "AZUL" ? -40 : 40);
+      destX = constrain(this.zonaPreferidaX || meioX, 110, mundoLargura - 110);
+      destY = meioY + (this.time === "AZUL" ? -50 : 50);
     }
 
     let angMov = usouMovimentoCurtoAlcance ? this.angulo : this.navegarPara(destX, destY, 0.96);
@@ -7957,51 +7963,53 @@ class RatoAsh {
     }
 
     if (alvo) {
-      let angDesejado = atan2(alvo.y - this.y, alvo.x - this.x);
+      // Usa sua função de linha de visão + varredura angular completa ao redor de obstáculos
+      let angDesejado = calcularDirecaoContorno(this, alvo.x, alvo.y);
 
-      if (this.desvioTimer > 0) {
-        this.desvioTimer--;
-        angDesejado = this.anguloDesvio;
-      }
+      // Verificação curta de segurança (1 passo à frente) para nunca encostar e travar na quina
+      let lookAhead = this.raio + 10;
+      let tx = this.x + cos(angDesejado) * lookAhead;
+      let ty = this.y + sin(angDesejado) * lookAhead;
 
-      let passoTeste = this.velocidade * 6;
-      let tx = this.x + cos(angDesejado) * passoTeste;
-      let ty = this.y + sin(angDesejado) * passoTeste;
-
-      if (circuloColideObstaculo(tx, ty, this.raio)) {
-        let offsets = [0.6, -0.6, 1.1, -1.1, 1.57, -1.57, 2.2, -2.2];
-        let melhorAng = angDesejado + this.ladoDesvio * HALF_PI;
-        for (let off of offsets) {
-          let cand = angDesejado + off * this.ladoDesvio;
-          if (!circuloColideObstaculo(this.x + cos(cand) * passoTeste, this.y + sin(cand) * passoTeste, this.raio)) {
-            melhorAng = cand;
+      if (circuloColideObstaculo(tx, ty, this.raio) || (modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(tx, ty, this.raio))) {
+        if (!this.ladoContorno) this.ladoContorno = random() < 0.5 ? 1 : -1;
+        for (let ang = 20; ang <= 170; ang += 15) {
+          let cand = angDesejado + radians(ang * this.ladoContorno);
+          let cx = this.x + cos(cand) * lookAhead;
+          let cy = this.y + sin(cand) * lookAhead;
+          let livre = !circuloColideObstaculo(cx, cy, this.raio) &&
+            !(modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(cx, cy, this.raio));
+          if (livre) {
+            angDesejado = cand;
             break;
           }
         }
-        this.anguloDesvio = melhorAng;
-        this.desvioTimer = 18;
-        angDesejado = this.anguloDesvio;
       }
 
       this.angulo = angDesejado;
 
       let antesX = this.x;
       let antesY = this.y;
-      let nx = constrain(this.x + cos(this.angulo) * this.velocidade, 28, mundoLargura - 28);
-      if (!circuloColideObstaculo(nx, this.y, this.raio)) {
+      let nx = this.x + cos(this.angulo) * this.velocidade;
+      let ny = this.y + sin(this.angulo) * this.velocidade;
+
+      // Desliza nos eixos X e Y separadamente e garante que nunca fique preso dentro/atrás de parede
+      if (!circuloColideObstaculo(nx, this.y, this.raio) && !(modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(nx, this.y, this.raio))) {
         this.x = nx;
       }
-      let ny = constrain(this.y + sin(this.angulo) * this.velocidade, 56, mundoAltura - 28);
-      if (!circuloColideObstaculo(this.x, ny, this.raio)) {
+      if (!circuloColideObstaculo(this.x, ny, this.raio) && !(modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(this.x, ny, this.raio))) {
         this.y = ny;
       }
 
-      if (dist(antesX, antesY, this.x, this.y) < 0.5) {
+      let posSegura = resolverColisaoCirculoParede(this.x, this.y, this.raio);
+      this.x = posSegura.x;
+      this.y = posSegura.y;
+
+      // Se o progresso real foi quase zero (preso em quina), inverte o lado de contorno imediatamente
+      if (dist(antesX, antesY, this.x, this.y) < this.velocidade * 0.35) {
         this.framesPresoRato = (this.framesPresoRato || 0) + 1;
-        if (this.framesPresoRato > 8) {
-          this.ladoDesvio *= -1;
-          this.anguloDesvio = angDesejado + this.ladoDesvio * (PI * 0.7);
-          this.desvioTimer = 22;
+        if (this.framesPresoRato > 4) {
+          this.ladoContorno = -(this.ladoContorno || 1);
           this.framesPresoRato = 0;
         }
       } else {
