@@ -3537,7 +3537,7 @@ function resetarPosicoesFutebrawl(sortearBots = false) {
 
   // Paredes invisíveis e indestrutíveis nos lados dos gols (Barley joga por cima)
   let margemGol = 350; // (1000 - 300) / 2 = 350px de cada lado
-  let profGol = 135;   // Profundidade da área externa do gol
+  let profGol = 175;   // Profundidade da área externa do gol
 
   // Lados do Gol Superior (Vermelho)
   obstaculos.push(new Obstaculo(0, 0, margemGol, profGol, true));
@@ -4056,7 +4056,7 @@ function resolverColisaoCirculoParede(cx, cy, raio) {
     if (naBocaDoGol) {
       y = constrain(y, 35 + raio, mundoAltura - 35 - raio);
     } else {
-      y = constrain(y, 135 + raio, mundoAltura - 135 - raio);
+      y = constrain(y, 175 + raio, mundoAltura - 175 - raio);
     }
   } else {
     x = constrain(x, 28 + raio, mundoLargura - 28 - raio);
@@ -4075,7 +4075,7 @@ function circuloForaCampoFutebrawl(cx, cy, raio) {
   if (dentroLarguraGol) {
     if (cy < 35 + raio || cy > mundoAltura - 35 - raio) return true;
   } else {
-    if (cy < 135 + raio || cy > mundoAltura - 135 - raio) return true;
+    if (cy < 175 + raio || cy > mundoAltura - 175 - raio) return true;
   }
   return false;
 }
@@ -4341,14 +4341,14 @@ function atualizarBola() {
     if (bola.rastro[i].vida <= 0) bola.rastro.splice(i, 1);
   }
 
-  if (bola.y < 135 && bola.x > golEsq && bola.x < golDir) {
+  if (bola.y < 175 && bola.x > golEsq && bola.x < golDir) {
     placarAzul++;
     let autor = (bola.ultimoTocador && bola.ultimoTocador.time === "AZUL") ? bola.ultimoTocador : jogador;
-    iniciarCelebracaoGol("AZUL", bola.x, 110, autor);
-  } else if (bola.y > mundoAltura - 135 && bola.x > golEsq && bola.x < golDir) {
+    iniciarCelebracaoGol("AZUL", bola.x, 120, autor);
+  } else if (bola.y > mundoAltura - 175 && bola.x > golEsq && bola.x < golDir) {
     placarVermelho++;
     let autor = (bola.ultimoTocador && bola.ultimoTocador.time === "VERMELHO") ? bola.ultimoTocador : inimigos[0];
-    iniciarCelebracaoGol("VERMELHO", bola.x, mundoAltura - 110, autor);
+    iniciarCelebracaoGol("VERMELHO", bola.x, mundoAltura - 120, autor);
   }
 }
 
@@ -4578,21 +4578,21 @@ function desenharJogo() {
 
     // Área externa escura ao redor do estádio (igual ao Brawl Stars)
     fill(20, 78, 36);
-    rect(0, 0, mundoLargura, 135);
-    rect(0, mundoAltura - 135, mundoLargura, 135);
+    rect(0, 0, mundoLargura, 175);
+    rect(0, mundoAltura - 175, mundoLargura, 175);
     rect(0, 0, 50, mundoAltura);
     rect(mundoLargura - 50, 0, 50, mundoAltura);
 
     // Gramado interno dos dois gols recuados
     fill(35, 138, 58);
-    rect(golEsq, 35, 300, 100);
-    rect(golEsq, mundoAltura - 135, 300, 100);
+    rect(golEsq, 35, 300, 140);
+    rect(golEsq, mundoAltura - 175, 300, 140);
 
     // Linhas brancas do campo
-    stroke(255, 255, 255, 135);
+    stroke(255, 255, 255, 175);
     strokeWeight(3);
     noFill();
-    rect(50, 135, mundoLargura - 100, mundoAltura - 270);
+    rect(50, 175, mundoLargura - 140, mundoAltura - 270);
     line(50, meioY, mundoLargura - 50, meioY);
     ellipse(meioX, meioY, 160, 160);
     fill(255, 255, 255, 165);
@@ -4600,29 +4600,29 @@ function desenharJogo() {
 
     // Grandes áreas e pequenas áreas (Cima e Baixo)
     noFill();
-    rect(meioX - 210, 135, 420, 165);
+    rect(meioX - 210, 175, 420, 165);
     rect(meioX - 210, mundoAltura - 300, 420, 165);
-    rect(meioX - 145, 135, 290, 75);
+    rect(meioX - 145, 175, 290, 75);
     rect(meioX - 145, mundoAltura - 210, 290, 75);
 
     // Gol Vermelho (Cima)
     fill(255, 60, 60, 125);
     stroke(255, 150, 150);
     strokeWeight(4);
-    rect(golEsq, 35, 300, 100, 6);
+    rect(golEsq, 35, 300, 140, 6);
 
     // Gol Azul (Baixo)
     fill(0, 160, 255, 125);
     stroke(140, 225, 255);
     strokeWeight(4);
-    rect(golEsq, mundoAltura - 135, 300, 100, 6);
+    rect(golEsq, mundoAltura - 175, 300, 140, 6);
 
     // Linha tracejada na entrada dos dois gols (igual da imagem)
     stroke(255, 255, 255, 210);
     strokeWeight(3);
     for (let lx = golEsq + 12; lx < golDir - 10; lx += 22) {
-      line(lx, 135, lx + 12, 135);
-      line(lx, mundoAltura - 135, lx + 12, mundoAltura - 135);
+      line(lx, 175, lx + 12, 175);
+      line(lx, mundoAltura - 175, lx + 12, mundoAltura - 175);
     }
 
     // Os 3 círculos de respawn atrás de cada gol
@@ -4631,11 +4631,11 @@ function desenharJogo() {
     // Traves nos cantos dos gols
     noStroke();
     fill(235, 45, 55);
-    ellipse(golEsq, 135, 22, 22);
-    ellipse(golDir, 135, 22, 22);
+    ellipse(golEsq, 175, 22, 22);
+    ellipse(golDir, 175, 22, 22);
     fill(35, 165, 255);
-    ellipse(golEsq, mundoAltura - 135, 22, 22);
-    ellipse(golDir, mundoAltura - 135, 22, 22);
+    ellipse(golEsq, mundoAltura - 175, 22, 22);
+    ellipse(golDir, mundoAltura - 175, 22, 22);
   } else {
     stroke(255, 255, 255, 28);
     strokeWeight(1);
