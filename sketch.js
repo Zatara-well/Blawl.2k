@@ -8902,13 +8902,6 @@ function desenharControlesMobile() {
   }
 }
 
-// Gol Superior
-paredes.push({ x: 0, y: 0, w: margemGol, h: profGol, tipo: "indestrutivel" });
-paredes.push({ x: 1000 - margemGol, y: 0, w: margemGol, h: profGol, tipo: "indestrutivel" });
-
-// Gol Inferior
-paredes.push({ x: 0, y: 1550 - profGol, w: margemGol, h: profGol, tipo: "indestrutivel" });
-paredes.push({ x: 1000 - margemGol, y: 1550 - profGol, w: margemGol, h: profGol, tipo: "indestrutivel" });
 // =========================================================================
 // FUNÇÕES DE VISÃO E DESVIO DE PAREDE (RATOS DO ASH E BOTS)
 // =========================================================================
