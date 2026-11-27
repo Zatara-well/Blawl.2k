@@ -320,6 +320,8 @@ let celebracaoGol = {
 let modoMira = "ATAQUE"; // "ATAQUE" ou "SUPER"
 let teclasPressionadas = {};
 let ultimoToqueY = 0;
+let cliquePonteiroInicio = null;
+let cliquePonteiroBotaoDireito = false;
 
 const DADOS_BRAWLERS = [
   {
@@ -632,6 +634,34 @@ function executarAutoFirePC() {
     // Se não houver ninguém perto, atira na direção atual
     jogador.atacar();
   }
+}
+function executarAutoSuperPC() {
+  if (!jogador || jogador.vida <= 0 || jogador.superCarga < 100) return;
+
+  if (modoSelecionado === "FUTEBRAWL" && bola && bola.posse === jogador) {
+    let golY = jogador.time === "AZUL" ? 125 : mundoAltura - 125;
+    jogador.angulo = atan2(golY - jogador.y, mundoLargura / 2 - jogador.x);
+    jogador.usarSuper();
+    return;
+  }
+
+  let alvoMaisProximo = null;
+  let menorDist = Infinity;
+
+  for (let ini of inimigos) {
+    if (ini.vida > 0 && inimigoReveladoNaMoita(ini)) {
+      let d = dist(jogador.x, jogador.y, ini.x, ini.y);
+      if (d < menorDist) {
+        menorDist = d;
+        alvoMaisProximo = ini;
+      }
+    }
+  }
+
+  if (alvoMaisProximo && menorDist <= 480) {
+    jogador.angulo = atan2(alvoMaisProximo.y - jogador.y, alvoMaisProximo.x - jogador.x);
+  }
+  jogador.usarSuper();
 }
 
 function mouseWheel(event) {
@@ -3355,12 +3385,10 @@ if (ehBotaoDireito || ferramentaEditor === "CAMERA") {
   } else if (estadoJogo === "JOGANDO") {
     if (ehMobile || touches.length > 0) return;
     if (!celebracaoGol.ativo && jogador && jogador.vida > 0) {
-      if (ehBotaoDireito || modoMira === "SUPER") {
-        jogador.usarSuper();
-      } else {
-        jogador.atacar();
-      }
+      cliquePonteiroInicio = { x: cx, y: cy };
+      cliquePonteiroBotaoDireito = ehBotaoDireito;
     }
+  }
   } else if (estadoJogo === "FIM") {
     if (cx >= width / 2 - 125 && cx <= width / 2 + 125 && cy >= height - 74 && cy <= height - 18) {
       estadoJogo = "MENU";
@@ -3385,7 +3413,28 @@ function mouseReleased() {
   if (ehMobile || touches.length > 0) return;
   if (estadoJogo === "MAP_MAKER") {
     arrastandoCameraEditor = false;
+    return;
   }
+
+  if (estadoJogo === "JOGANDO" && cliquePonteiroInicio && !celebracaoGol.ativo && jogador && jogador.vida > 0) {
+    let distArrasto = dist(cliquePonteiroInicio.x, cliquePonteiroInicio.y, mouseX, mouseY);
+    let ehCliqueRapido = distArrasto < 12; // Clique parado = Auto-Fire
+
+    if (cliquePonteiroBotaoDireito || modoMira === "SUPER") {
+      if (ehCliqueRapido) {
+        executarAutoSuperPC();
+      } else {
+        jogador.usarSuper();
+      }
+    } else {
+      if (ehCliqueRapido) {
+        executarAutoFirePC();
+      } else {
+        jogador.atacar();
+      }
+    }
+  }
+  cliquePonteiroInicio = null;
 }
 
 // ==========================================
@@ -6620,16 +6669,19 @@ class Brawler {
     return true;
   }
   
-  navegarPara(tx, ty, velocidadeFator = 1.0) {
+ navegarPara(tx, ty, velocidadeFator = 1.0) {
     let velAtual = this.calcularVelocidadeAtual();
-    let angDesejado = atan2(ty - this.y, tx - this.x);
+
+    // Usa o caminho inteligente (BFS) sempre que houver parede entre o bot e o destino
+    let destinoPasso = calcularProximoPassoBFS(this.x, this.y, tx, ty, this.raio);
+    let angDesejado = atan2(destinoPasso.y - this.y, destinoPasso.x - this.x);
 
     if (this.desvioTimer > 0) {
       this.desvioTimer--;
       angDesejado = this.anguloDesvio;
     }
 
-    let passoTeste = velAtual * 6.5;
+    let passoTeste = velAtual * 5.0;
     let testeX = this.x + cos(angDesejado) * passoTeste;
     let testeY = this.y + sin(angDesejado) * passoTeste;
     let bateuParede = this.colideObstaculo(testeX, testeY) ||
@@ -6650,17 +6702,17 @@ class Brawler {
         }
       }
       this.anguloDesvio = melhorAng;
-      this.desvioTimer = 20;
+      this.desvioTimer = 14;
       angDesejado = this.anguloDesvio;
     }
 
     let moveu = this.aplicarMovimento(cos(angDesejado) * velAtual * velocidadeFator, sin(angDesejado) * velAtual * velocidadeFator);
     if (moveu < 0.45) {
       this.framesPreso++;
-      if (this.framesPreso > 8) {
+      if (this.framesPreso > 6) {
         this.ladoContornoBot *= -1;
         this.anguloDesvio = angDesejado + this.ladoContornoBot * (PI * 0.72);
-        this.desvioTimer = 26;
+        this.desvioTimer = 18;
         this.framesPreso = 0;
       }
     } else {
@@ -8051,6 +8103,7 @@ class RatoAsh {
       return;
     }
 
+    // Procura o inimigo vivo mais próximo em QUALQUER lugar do mapa (sem limite de distância)
     let alvo = null;
     let menorDist = Infinity;
     for (let b of todos) {
@@ -8064,23 +8117,23 @@ class RatoAsh {
     }
 
     if (alvo) {
-      // Usa sua função de linha de visão + varredura angular completa ao redor de obstáculos
-      let angDesejado = calcularDirecaoContorno(this, alvo.x, alvo.y);
+      // Calcula o próximo ponto livre usando BFS para contornar paredes de qualquer tamanho
+      let proxPonto = calcularProximoPassoBFS(this.x, this.y, alvo.x, alvo.y, this.raio);
+      let angDesejado = atan2(proxPonto.y - this.y, proxPonto.x - this.x);
 
-      // Verificação curta de segurança (1 passo à frente) para nunca encostar e travar na quina
-      let lookAhead = this.raio + 10;
+      // Desvio curto caso encoste numa quina no meio do passo
+      let lookAhead = this.raio + 8;
       let tx = this.x + cos(angDesejado) * lookAhead;
       let ty = this.y + sin(angDesejado) * lookAhead;
 
       if (circuloColideObstaculo(tx, ty, this.raio) || (modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(tx, ty, this.raio))) {
         if (!this.ladoContorno) this.ladoContorno = random() < 0.5 ? 1 : -1;
-        for (let ang = 20; ang <= 170; ang += 15) {
+        for (let ang = 25; ang <= 165; ang += 20) {
           let cand = angDesejado + radians(ang * this.ladoContorno);
           let cx = this.x + cos(cand) * lookAhead;
           let cy = this.y + sin(cand) * lookAhead;
-          let livre = !circuloColideObstaculo(cx, cy, this.raio) &&
-            !(modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(cx, cy, this.raio));
-          if (livre) {
+          if (!circuloColideObstaculo(cx, cy, this.raio) &&
+              !(modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(cx, cy, this.raio))) {
             angDesejado = cand;
             break;
           }
@@ -8094,7 +8147,6 @@ class RatoAsh {
       let nx = this.x + cos(this.angulo) * this.velocidade;
       let ny = this.y + sin(this.angulo) * this.velocidade;
 
-      // Desliza nos eixos X e Y separadamente e garante que nunca fique preso dentro/atrás de parede
       if (!circuloColideObstaculo(nx, this.y, this.raio) && !(modoSelecionado === "FUTEBRAWL" && circuloForaCampoFutebrawl(nx, this.y, this.raio))) {
         this.x = nx;
       }
@@ -8106,7 +8158,6 @@ class RatoAsh {
       this.x = posSegura.x;
       this.y = posSegura.y;
 
-      // Se o progresso real foi quase zero (preso em quina), inverte o lado de contorno imediatamente
       if (dist(antesX, antesY, this.x, this.y) < this.velocidade * 0.35) {
         this.framesPresoRato = (this.framesPresoRato || 0) + 1;
         if (this.framesPresoRato > 4) {
@@ -9069,4 +9120,124 @@ function calcularAlcanceLivreAsh(x, y, angulo, alcanceMax) {
     }
   }
   return alcanceMax;
+}
+// =========================================================================
+// BUSCA DE CAMINHO (PATHFINDING BFS) PARA RATOS TELEGUIADOS E BOTS
+// =========================================================================
+function calcularProximoPassoBFS(origemX, origemY, destinoX, destinoY, raioEntidade) {
+  const TAM_CELULA = 50;
+  let cols = Math.ceil(mundoLargura / TAM_CELULA);
+  let rows = Math.ceil(mundoAltura / TAM_CELULA);
+
+  let startC = constrain(Math.floor(origemX / TAM_CELULA), 0, cols - 1);
+  let startR = constrain(Math.floor(origemY / TAM_CELULA), 0, rows - 1);
+  let endC = constrain(Math.floor(destinoX / TAM_CELULA), 0, cols - 1);
+  let endR = constrain(Math.floor(destinoY / TAM_CELULA), 0, rows - 1);
+
+  if (startC === endC && startR === endR) {
+    return { x: destinoX, y: destinoY };
+  }
+
+  // Se há linha de visão totalmente limpa, vai direto em linha reta
+  if (temLinhaDeVisao(origemX, origemY, destinoX, destinoY)) {
+    let ang = atan2(destinoY - origemY, destinoX - origemX);
+    let tx = origemX + cos(ang) * (raioEntidade + 12);
+    let ty = origemY + sin(ang) * (raioEntidade + 12);
+    if (!circuloColideObstaculo(tx, ty, raioEntidade)) {
+      return { x: destinoX, y: destinoY };
+    }
+  }
+
+  let bloqueado = new Uint8Array(cols * rows);
+  for (let o of obstaculos) {
+    let cMin = max(0, Math.floor((o.x - raioEntidade * 0.6) / TAM_CELULA));
+    let cMax = min(cols - 1, Math.floor((o.x + o.w + raioEntidade * 0.6) / TAM_CELULA));
+    let rMin = max(0, Math.floor((o.y - raioEntidade * 0.6) / TAM_CELULA));
+    let rMax = min(rows - 1, Math.floor((o.y + o.h + raioEntidade * 0.6) / TAM_CELULA));
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        bloqueado[r * cols + c] = 1;
+      }
+    }
+  }
+
+  // Garante que origem e destino não fiquem marcados como inacessíveis
+  bloqueado[startR * cols + startC] = 0;
+  bloqueado[endR * cols + endC] = 0;
+
+  let visitado = new Uint8Array(cols * rows);
+  let pai = new Int32Array(cols * rows).fill(-1);
+  let fila = [];
+
+  let startIdx = startR * cols + startC;
+  let endIdx = endR * cols + endC;
+  visitado[startIdx] = 1;
+  fila.push(startIdx);
+
+  let dirs = [
+    [1, 0], [-1, 0], [0, 1], [0, -1],
+    [1, 1], [1, -1], [-1, 1], [-1, -1]
+  ];
+
+  let achou = false;
+  let head = 0;
+  while (head < fila.length) {
+    let atual = fila[head++];
+    if (atual === endIdx) {
+      achou = true;
+      break;
+    }
+
+    let c = atual % cols;
+    let r = Math.floor(atual / cols);
+
+    for (let d of dirs) {
+      let nc = c + d[0];
+      let nr = r + d[1];
+      if (nc < 0 || nc >= cols || nr < 0 || nr >= rows) continue;
+
+      let nIdx = nr * cols + nc;
+      if (visitado[nIdx] || bloqueado[nIdx]) continue;
+
+      // Evita cortar quina diagonal atravessando parede
+      if (d[0] !== 0 && d[1] !== 0) {
+        if (bloqueado[r * cols + nc] || bloqueado[nr * cols + c]) continue;
+      }
+
+      visitado[nIdx] = 1;
+      pai[nIdx] = atual;
+      fila.push(nIdx);
+    }
+  }
+
+  if (!achou) {
+    return { x: destinoX, y: destinoY };
+  }
+
+  // Reconstrói o caminho e pega o próximo waypoint visível
+  let caminho = [];
+  let curr = endIdx;
+  while (curr !== -1 && curr !== startIdx) {
+    let cc = curr % cols;
+    let cr = Math.floor(curr / cols);
+    caminho.push({
+      x: cc * TAM_CELULA + TAM_CELULA * 0.5,
+      y: cr * TAM_CELULA + TAM_CELULA * 0.5
+    });
+    curr = pai[curr];
+  }
+
+  if (caminho.length === 0) return { x: destinoX, y: destinoY };
+  caminho.reverse();
+
+  // Suaviza a curva pegando o ponto mais distante do caminho que ainda tem visão livre
+  let alvoWaypoint = caminho[0];
+  for (let i = min(caminho.length - 1, 5); i >= 0; i--) {
+    if (temLinhaDeVisao(origemX, origemY, caminho[i].x, caminho[i].y)) {
+      alvoWaypoint = caminho[i];
+      break;
+    }
+  }
+
+  return alvoWaypoint;
 }
