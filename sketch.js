@@ -4660,26 +4660,49 @@ function desenharJogo() {
   }
 
   for (let rc of rachadurasChao) {
-    let opacidade = map(rc.vida, 0, rc.vidaMax, 0, 220);
+    let progresso = 1 - rc.vida / rc.vidaMax;
+    let opacidade = map(rc.vida, 0, rc.vidaMax, 0, 235);
+    let avancoAtual = rc.comprimento * min(1, progresso * 3.2);
+
     push();
     translate(rc.x, rc.y);
     rotate(rc.angulo);
 
-    stroke(35, 25, 15, opacidade);
-    strokeWeight(4);
+    // 1. Cone de impacto no chão (onda de choque)
+    noStroke();
+    fill(rc.furiaAlta ? color(255, 65, 35, opacidade * 0.35) : color(255, 210, 70, opacidade * 0.32));
+    beginShape();
+    vertex(0, -10);
+    vertex(avancoAtual, -26);
+    vertex(avancoAtual + 8, 0);
+    vertex(avancoAtual, 26);
+    vertex(0, 10);
+    endShape(CLOSE);
+
+    // 2. Fenda central escura no solo
+    stroke(35, 22, 12, opacidade);
+    strokeWeight(5);
     noFill();
     beginShape();
     vertex(0, 0);
-    vertex(rc.comprimento * 0.3, -6);
-    vertex(rc.comprimento * 0.6, 5);
-    vertex(rc.comprimento, -2);
+    vertex(avancoAtual * 0.35, -5);
+    vertex(avancoAtual * 0.7, 4);
+    vertex(avancoAtual, 0);
     endShape();
 
-    stroke(rc.furiaAlta ? color(255, 100, 50, opacidade) : color(120, 235, 255, opacidade * 0.85));
-    strokeWeight(2);
-    line(rc.comprimento * 0.25, -4, rc.comprimento * 0.45, -14);
-    line(rc.comprimento * 0.55, 4, rc.comprimento * 0.75, 15);
-    line(rc.comprimento * 0.8, -1, rc.comprimento * 0.95, -10);
+    // 3. Núcleo brilhante de energia/fúria
+    stroke(rc.furiaAlta ? color(255, 110, 45, opacidade) : color(255, 240, 130, opacidade));
+    strokeWeight(2.5);
+    line(4, 0, avancoAtual * 0.92, 0);
+
+    // 4. Ondas transversais percorrendo o golpe
+    noFill();
+    strokeWeight(3);
+    for (let w = 1; w <= 3; w++) {
+      let distOnda = (avancoAtual / 3) * w;
+      let larguraOnda = 14 + w * 5;
+      arc(distOnda, 0, 12, larguraOnda * 2, -HALF_PI * 0.85, HALF_PI * 0.85);
+    }
     pop();
   }
 
@@ -6350,29 +6373,50 @@ class Brawler {
         this.ganharFuria(24);
       }
 
+      let alcanceVisual = calcularAlcanceLivreAsh(this.x, this.y, this.angulo, 130);
+
       rachadurasChao.push({
-        x: this.x + cos(this.angulo) * 20,
-        y: this.y + sin(this.angulo) * 20,
+        x: this.x + cos(this.angulo) * 18,
+        y: this.y + sin(this.angulo) * 18,
         angulo: this.angulo,
-        comprimento: 125,
+        comprimento: alcanceVisual,
         furiaAlta: furiaAlta,
-        vida: 30,
-        vidaMax: 30
+        bateuParede: alcanceVisual < 125,
+        vida: 26,
+        vidaMax: 26
       });
 
-      for (let k = 0; k < 6; k++) {
-        let angPart = this.angulo + random(-0.4, 0.4);
-        let distPart = random(35, 130);
+      // Partículas distribuídas apenas até onde o golpe alcançou (não atravessa parede)
+      let qtdParticulas = Math.max(3, Math.floor(alcanceVisual / 16));
+      for (let k = 0; k < qtdParticulas; k++) {
+        let angPart = this.angulo + random(-0.28, 0.28);
+        let distPart = random(20, alcanceVisual);
         particulas.push({
           x: this.x + cos(angPart) * distPart,
           y: this.y + sin(angPart) * distPart,
-          vx: cos(angPart) * random(0.5, 2),
-          vy: sin(angPart) * random(0.5, 2),
-          tam: random(4, 8),
-          cor: furiaAlta ? color(255, 90, 40, 220) : color(180, 140, 90, 210),
+          vx: cos(angPart) * random(0.8, 2.4) + random(-0.8, 0.8),
+          vy: sin(angPart) * random(0.8, 2.4) + random(-0.8, 0.8),
+          tam: random(5, 10),
+          cor: furiaAlta ? color(255, 75, 35, 235) : color(255, 200, 75, 220),
           vida: 18
         });
       }
+
+      // Faíscas extra se a vassoura bater na parede
+      if (alcanceVisual < 125) {
+        let impX = this.x + cos(this.angulo) * (alcanceVisual + 16);
+        let impY = this.y + sin(this.angulo) * (alcanceVisual + 16);
+        for (let k = 0; k < 6; k++) {
+          particulas.push({
+            x: impX,
+            y: impY,
+            vx: random(-3, 3),
+            vy: random(-3, 3),
+            tam: random(4, 7),
+            cor: color(255, 235, 150, 240),
+            vida: 14
+          });
+        }
     } else if (this.tipo === "TRUNK") {
       this.delayAtaqueTrunk = 30;
 
@@ -6502,7 +6546,7 @@ class Brawler {
   }
   estaDentroDoGol() {
     if (modoSelecionado !== "FUTEBRAWL") return false;
-    return this.y < 142 || this.y > mundoAltura - 142;
+    return this.y < 185 || this.y > mundoAltura - 185;
   }
 
   linhaTiroBateParedeGol(tx, ty) {
@@ -6514,7 +6558,7 @@ class Brawler {
       let t = i / passos;
       let px = lerp(this.x, tx, t);
       let py = lerp(this.y, ty, t);
-      if ((py < 135 || py > mundoAltura - 135) && (px < golEsq || px > golDir)) {
+      if ((py < 175 || py > mundoAltura - 175) && (px < golEsq || px > golDir)) {
         return true;
       }
     }
@@ -6536,6 +6580,19 @@ class Brawler {
     }
     return true;
   }
+  function calcularAlcanceLivreAsh(x, y, angulo, alcanceMax) {
+  let passo = 6;
+  for (let d = 15; d <= alcanceMax; d += passo) {
+    let px = x + cos(angulo) * d;
+    let py = y + sin(angulo) * d;
+    for (let o of obstaculos) {
+      if (px >= o.x && px <= o.x + o.w && py >= o.y && py <= o.y + o.h) {
+        return max(12, d - passo);
+      }
+    }
+  }
+  return alcanceMax;
+}
 
   navegarPara(tx, ty, velocidadeFator = 1.0) {
     let velAtual = this.calcularVelocidadeAtual();
@@ -7180,19 +7237,29 @@ class Brawler {
       }
     }
 
-    // 2. Saída decidida da base/gol: usa um timer (timerSaindoBase) para avançar até o campo aberto sem ficar indo e voltando na linha do gol
-    let naZonaBase = this.time === "AZUL" ? (this.y > mundoAltura - 230) : (this.y < 230);
-    let bolaAmeacandoMeuGol = this.time === "AZUL" ? (bolaObj.y > mundoAltura - 320) : (bolaObj.y < 320);
+    // 2. Saída decidida da base/gol: força o bot a sair até o campo aberto sem travar nas paredes da área
+    let bolaAmeacandoMeuGol = this.time === "AZUL" ? (bolaObj.y > mundoAltura - 300) : (bolaObj.y < 300);
 
     if (this.estaDentroDoGol() && bolaObj.posse !== this && !bolaAmeacandoMeuGol) {
-      this.timerSaindoBase = 38; // Compromete-se por ~0.6s a sair da base até o meio
+      if (!this.timerSaindoBase || this.timerSaindoBase <= 0) {
+        this.timerSaindoBase = 55; // Compromete-se por quase 1s inteiro a sair da área do gol
+        // Escolhe um ponto de saída no campo aberto (esquerda, centro ou direita)
+        let colunasSaida = [meioX - 240, meioX, meioX + 240];
+        this.alvoSaidaGolX = colunasSaida[this.indiceSpawnGol % 3];
+      }
     }
 
     if (this.timerSaindoBase && this.timerSaindoBase > 0 && bolaObj.posse !== this && !bolaAmeacandoMeuGol) {
       this.timerSaindoBase--;
-      let saidaY = this.time === "AZUL" ? mundoAltura - 340 : 340;
-      let faixaLateral = (this.indiceSpawnGol === 1) ? -140 : (this.indiceSpawnGol === 2 ? 140 : 0);
-      let saidaX = constrain(meioX + faixaLateral, 120, mundoLargura - 120);
+      let saidaY = this.time === "AZUL" ? mundoAltura - 380 : 380;
+      let saidaX = this.alvoSaidaGolX || meioX;
+
+      // Se houver parede bloqueando o caminho direto para a saída, alterna a coluna de saída
+      if (!this.temLinhaDeVisao(saidaX, saidaY) && this.framesPreso > 4) {
+        this.alvoSaidaGolX = this.x < meioX ? meioX + 260 : meioX - 260;
+        saidaX = this.alvoSaidaGolX;
+      }
+
       this.angulo = this.navegarPara(saidaX, saidaY, 1.0);
       return;
     }
