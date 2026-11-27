@@ -4368,12 +4368,6 @@ function bolaColideObstaculo(bx, by) {
   let raioBola = bola ? bola.raio : 15;
   return circuloColideObstaculo(bx, by, raioBola);
 }
-// Proteção extra: se por qualquer motivo a bola encostar/entrar numa parede, empurra para fora
-  if (bolaColideObstaculo(bola.x, bola.y)) {
-    let posLivre = resolverColisaoCirculoParede(bola.x, bola.y, bola.raio);
-    bola.x = posLivre.x;
-    bola.y = posLivre.y;
-  }
 
 function criarTextoDano(x, y, valor, cor, ehCritico = false, opcoes = {}) {
   let tipo = opcoes.tipo || "AVISO";
@@ -8907,9 +8901,6 @@ function desenharControlesMobile() {
     spawnsEditor.push({ x, y });
   }
 }
-// Gol com 6 espaços (300px) centralizado em 1000px (vai de x=350 até x=650)
-let margemGol = 350;
-let profGol = 100;
 
 // Gol Superior
 paredes.push({ x: 0, y: 0, w: margemGol, h: profGol, tipo: "indestrutivel" });
