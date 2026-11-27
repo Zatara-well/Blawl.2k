@@ -4588,11 +4588,19 @@ function desenharJogo() {
     rect(golEsq, 35, 300, 140);
     rect(golEsq, mundoAltura - 175, 300, 140);
 
-    // Linhas brancas do campo
-    stroke(255, 255, 255, 175);
+    // Linhas brancas do campo (contornando a entrada dos gols)
+    stroke(255, 255, 255, 135);
     strokeWeight(3);
     noFill();
-    rect(50, 175, mundoLargura - 140, mundoAltura - 270);
+    // Linhas laterais esquerda e direita
+    line(50, 175, 50, mundoAltura - 175);
+    line(mundoLargura - 50, 175, mundoLargura - 50, mundoAltura - 175);
+    // Linhas de fundo esquerda e direita (param nas traves do gol)
+    line(50, 175, golEsq, 175);
+    line(golDir, 175, mundoLargura - 50, 175);
+    line(50, mundoAltura - 175, golEsq, mundoAltura - 175);
+    line(golDir, mundoAltura - 175, mundoLargura - 50, mundoAltura - 175);
+    // Linha de meio-campo e círculo central
     line(50, meioY, mundoLargura - 50, meioY);
     ellipse(meioX, meioY, 160, 160);
     fill(255, 255, 255, 165);
@@ -4601,9 +4609,9 @@ function desenharJogo() {
     // Grandes áreas e pequenas áreas (Cima e Baixo)
     noFill();
     rect(meioX - 210, 175, 420, 165);
-    rect(meioX - 210, mundoAltura - 300, 420, 165);
+    rect(meioX - 210, mundoAltura - 340, 420, 165);
     rect(meioX - 145, 175, 290, 75);
-    rect(meioX - 145, mundoAltura - 210, 290, 75);
+    rect(meioX - 145, mundoAltura - 250, 290, 75);
 
     // Gol Vermelho (Cima)
     fill(255, 60, 60, 125);
