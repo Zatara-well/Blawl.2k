@@ -4008,6 +4008,63 @@ function atualizarJogo() {
     atualizarBola();
   }
 }
+// Função auxiliar que empurra qualquer círculo (bola ou rato) para o lado livre mais próximo fora da parede
+function resolverColisaoCirculoParede(cx, cy, raio) {
+  let x = cx;
+  let y = cy;
+
+  // Empurra para fora de cada obstáculo que estiver sobrepondo
+  for (let iter = 0; iter < 4; iter++) {
+    let colidiu = false;
+    for (let o of obstaculos) {
+      let maisProxX = constrain(x, o.x, o.x + o.w);
+      let maisProxY = constrain(y, o.y, o.y + o.h);
+      let dx = x - maisProxX;
+      let dy = y - maisProxY;
+      let d = sqrt(dx * dx + dy * dy);
+
+      if (d < raio) {
+        colidiu = true;
+        if (d > 0.001) {
+          let empurrao = raio - d + 0.5;
+          x += (dx / d) * empurrao;
+          y += (dy / d) * empurrao;
+        } else {
+          // Centro está totalmente dentro do bloco: acha a borda mais próxima
+          let distEsq = abs(x - o.x);
+          let distDir = abs(o.x + o.w - x);
+          let distCima = abs(y - o.y);
+          let distBaixo = abs(o.y + o.h - y);
+          let menor = min(distEsq, distDir, distCima, distBaixo);
+
+          if (menor === distEsq) x = o.x - raio - 0.5;
+          else if (menor === distDir) x = o.x + o.w + raio + 0.5;
+          else if (menor === distCima) y = o.y - raio - 0.5;
+          else y = o.y + o.h + raio + 0.5;
+        }
+      }
+    }
+    if (!colidiu) break;
+  }
+
+  // Garante também os limites externos do campo
+  if (modoSelecionado === "FUTEBRAWL") {
+    let golEsq = mundoLargura / 2 - 150;
+    let golDir = mundoLargura / 2 + 150;
+    x = constrain(x, 50 + raio, mundoLargura - 50 - raio);
+    let naBocaDoGol = x >= golEsq + raio && x <= golDir - raio;
+    if (naBocaDoGol) {
+      y = constrain(y, 35 + raio, mundoAltura - 35 - raio);
+    } else {
+      y = constrain(y, 135 + raio, mundoAltura - 135 - raio);
+    }
+  } else {
+    x = constrain(x, 28 + raio, mundoLargura - 28 - raio);
+    y = constrain(y, 56 + raio, mundoAltura - 28 - raio);
+  }
+
+  return { x: x, y: y };
+}
 function circuloForaCampoFutebrawl(cx, cy, raio) {
   let golEsq = mundoLargura / 2 - 150;
   let golDir = mundoLargura / 2 + 150;
@@ -4033,12 +4090,45 @@ function lancaBolaComAlcance(chutador, angulo, alcance, velInicial, ehSuper) {
   bola.alcanceMax = alcance;
   bola.alcanceRestante = alcance;
   bola.velInicial = velInicial;
-  bola.x = constrain(chutador.x + cos(angulo) * (chutador.raio + bola.raio + 6), 50 + bola.raio, mundoLargura - 50 - bola.raio);
-  bola.y = constrain(chutador.y + sin(angulo) * (chutador.raio + bola.raio + 6), 135 + bola.raio, mundoAltura - 135 - bola.raio);
-  bola.vx = cos(angulo) * velInicial;
-  bola.vy = sin(angulo) * velInicial;
-}
 
+  let dirX = cos(angulo);
+  let dirY = sin(angulo);
+  let distSaida = chutador.raio + bola.raio + 6;
+  let posSeguraX = chutador.x;
+  let posSeguraY = chutador.y;
+  let bateuNaSaida = false;
+
+  // Avança em pequenos passos a partir do jogador para não atravessar paredes próximas
+  let passos = ceil(distSaida / 4);
+  for (let i = 1; i <= passos; i++) {
+    let passoAtual = min(4, distSaida - (i - 1) * 4);
+    let testeX = posSeguraX + dirX * passoAtual;
+    if (bolaColideObstaculo(testeX, posSeguraY) || circuloForaCampoFutebrawl(testeX, posSeguraY, bola.raio)) {
+      dirX *= -1;
+      bateuNaSaida = true;
+    } else {
+      posSeguraX = testeX;
+    }
+
+    let testeY = posSeguraY + dirY * passoAtual;
+    if (bolaColideObstaculo(posSeguraX, testeY) || circuloForaCampoFutebrawl(posSeguraX, testeY, bola.raio)) {
+      dirY *= -1;
+      bateuNaSaida = true;
+    } else {
+      posSeguraY = testeY;
+    }
+  }
+
+  let ajustado = resolverColisaoCirculoParede(posSeguraX, posSeguraY, bola.raio);
+  bola.x = ajustado.x;
+  bola.y = ajustado.y;
+  bola.vx = dirX * velInicial;
+  bola.vy = dirY * velInicial;
+
+  if (bateuNaSaida) {
+    criarFaiscasRicochete(bola.x, bola.y, ehSuper);
+  }
+}
 function calcularTrajetoriaBola(brawler, angulo, alcance) {
   let raioBola = bola ? bola.raio : 15;
   let ox = brawler.x + cos(angulo) * (brawler.raio + raioBola + 6);
@@ -4278,6 +4368,12 @@ function bolaColideObstaculo(bx, by) {
   let raioBola = bola ? bola.raio : 15;
   return circuloColideObstaculo(bx, by, raioBola);
 }
+// Proteção extra: se por qualquer motivo a bola encostar/entrar numa parede, empurra para fora
+  if (bolaColideObstaculo(bola.x, bola.y)) {
+    let posLivre = resolverColisaoCirculoParede(bola.x, bola.y, bola.raio);
+    bola.x = posLivre.x;
+    bola.y = posLivre.y;
+  }
 
 function criarTextoDano(x, y, valor, cor, ehCritico = false, opcoes = {}) {
   let tipo = opcoes.tipo || "AVISO";
@@ -6227,7 +6323,8 @@ class Brawler {
           let d = dist(this.x, this.y, a.x, a.y);
           let angParaAlvo = atan2(a.y - this.y, a.x - this.x);
           let diffAng = abs(atan2(sin(angParaAlvo - this.angulo), cos(angParaAlvo - this.angulo)));
-          if (d < 145 && diffAng < 0.65) {
+          // Adicionado && this.temLinhaDeVisao(a.x, a.y) para bloquear atrás de paredes
+          if (d < 145 && diffAng < 0.65 && this.temLinhaDeVisao(a.x, a.y)) {
             a.receberDano(danoAsh, furiaAlta ? color(255, 80, 50) : color(255, 255, 255), furiaAlta, this);
             this.superCarga = min(100, this.superCarga + 14.3);
             acertouAlvo = true;
@@ -6240,7 +6337,8 @@ class Brawler {
           let d = dist(this.x, this.y, rt.x, rt.y);
           let angParaAlvo = atan2(rt.y - this.y, rt.x - this.x);
           let diffAng = abs(atan2(sin(angParaAlvo - this.angulo), cos(angParaAlvo - this.angulo)));
-          if (d < 145 && diffAng < 0.65) {
+          // Também bloqueia ataque nos ratos através da parede
+          if (d < 145 && diffAng < 0.65 && this.temLinhaDeVisao(rt.x, rt.y)) {
             rt.receberDano(danoAsh, this);
           }
         }
@@ -6395,7 +6493,8 @@ class Brawler {
         let px = constrain(centroAlvo.x + dirX * pos.frente + perpX * pos.lado, 45, mundoLargura - 45);
         let py = constrain(centroAlvo.y + dirY * pos.frente + perpY * pos.lado, 75, mundoAltura - 45);
         let tempoVoo = this.calcularTempoVooBarley(dist(this.x, this.y, px, py));
-        garrafas.push(new GarrafaBarley(this.x, this.y, px, py, this.danoBase, this.time, this, true, tempoVoo));
+        // Alterado de this.danoBase (400) para 500 na Super
+        garrafas.push(new GarrafaBarley(this.x, this.y, px, py, 500, this.time, this, true, tempoVoo));
       }
     }
   }
@@ -7716,17 +7815,18 @@ class GaiolaRatosAsh {
 
   soltarRatos() {
     let pontosGerados = [];
+    let raioRato = 16; // Mesmo raio definido no construtor de RatoAsh
 
     for (let i = 0; i < 5; i++) {
       let ang = (TWO_PI / 5) * i - HALF_PI;
       let raioDistribuicao = 36;
-      let rx = constrain(this.xAlvo + cos(ang) * raioDistribuicao, 34, mundoLargura - 34);
-      let ry = constrain(this.yAlvo + sin(ang) * raioDistribuicao, 64, mundoAltura - 34);
+      let rx = this.xAlvo + cos(ang) * raioDistribuicao;
+      let ry = this.yAlvo + sin(ang) * raioDistribuicao;
 
-      if (circuloColideObstaculo(rx, ry, 13)) {
-        rx = constrain(this.xAlvo, 34, mundoLargura - 34);
-        ry = constrain(this.yAlvo, 64, mundoAltura - 34);
-      }
+      // Se cair dentro de uma parede ou fora da arena, empurra para o lado mais próximo fora dela
+      let posLivre = resolverColisaoCirculoParede(rx, ry, raioRato);
+      rx = posLivre.x;
+      ry = posLivre.y;
 
       pontosGerados.push({ x: rx, y: ry });
       ratosAsh.push(new RatoAsh(rx, ry, this.time, this.dono, ang));
@@ -8085,6 +8185,13 @@ class GarrafaBarley {
       for (let b of todos) {
         if (b.time !== this.time && b.vida > 0) {
           if (dist(this.xAlvo, this.yAlvo, b.x, b.y) <= raioPoca + b.raio * 0.65) {
+            // Se for Super, evita que várias garrafas da mesma rajada causem dano instantâneo multiplicado
+            if (this.ehSuper) {
+              if (b.ultimoTickSuperBarley && frameCount - b.ultimoTickSuperBarley < 45) {
+                continue;
+              }
+              b.ultimoTickSuperBarley = frameCount;
+            }
             b.receberDano(this.danoTick, color(215, 120, 255), false, this.dono);
             if (this.dono && this.dono.vida > 0) {
               this.dono.superCarga = min(100, this.dono.superCarga + (this.ehSuper ? 4.5 : 10));
@@ -8095,6 +8202,12 @@ class GarrafaBarley {
       for (let rt of ratosAsh) {
         if (rt.time !== this.time && rt.vida > 0) {
           if (dist(this.xAlvo, this.yAlvo, rt.x, rt.y) <= raioPoca + rt.raio * 0.65) {
+            if (this.ehSuper) {
+              if (rt.ultimoTickSuperBarley && frameCount - rt.ultimoTickSuperBarley < 45) {
+                continue;
+              }
+              rt.ultimoTickSuperBarley = frameCount;
+            }
             rt.receberDano(this.danoTick, this.dono);
           }
         }
@@ -8214,6 +8327,14 @@ class GarrafaBarley {
             let marcoTempo = this.ultimoDanoAlvo.get(b);
             if (frameDecorrido - marcoTempo >= this.intervaloDanoFrames) {
               this.ultimoDanoAlvo.set(b, frameDecorrido);
+
+              if (this.ehSuper) {
+                if (b.ultimoTickSuperBarley && frameCount - b.ultimoTickSuperBarley < 55) {
+                  continue;
+                }
+                b.ultimoTickSuperBarley = frameCount;
+              }
+
               b.receberDano(this.danoTick, color(215, 120, 255), false, this.dono);
               if (this.dono && this.dono.vida > 0) {
                 if (this.ehSuper) {
